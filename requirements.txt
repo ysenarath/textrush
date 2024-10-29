@@ -1,0 +1,2 @@
+maturin==1.7.4
+semantic-version==2.10.0
