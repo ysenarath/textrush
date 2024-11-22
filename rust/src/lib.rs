@@ -127,31 +127,22 @@ impl PyKeywordProcessor {
                     .collect()
             } else {
                 let mut vec = vec![];
-                let mut it = text.char_indices().enumerate();
-                for (clean_word, mut word_start, mut word_end) in
-                    inner.extract_keywords_with_span(text)
-                {
-                    for (idx, (char_idx, _)) in it.by_ref() {
-                        if char_idx == word_start {
-                            word_start = idx;
-                            break;
-                        }
-                    }
-                    {
-                        let old_word_end = word_end;
-                        let mut last_idx = 0;
-                        for (idx, (char_idx, _)) in it.by_ref() {
-                            last_idx = idx;
-                            if word_end == char_idx {
-                                word_end = idx;
-                                break;
-                            }
-                        }
-                        if word_end == old_word_end {
-                            word_end = last_idx + 1;
-                        }
-                    }
-                    vec.push((clean_word.to_string(), word_start, word_end));
+                let char_indices: Vec<_> = text.char_indices().collect();
+                
+                for (clean_word, word_start, word_end) in inner.extract_keywords_with_span(text) {
+                    // Convert byte offset to char offset for start position
+                    let start_char_idx = char_indices
+                        .iter()
+                        .position(|(byte_idx, _)| *byte_idx == word_start)
+                        .unwrap_or(0);
+                    
+                    // Convert byte offset to char offset for end position
+                    let end_char_idx = char_indices
+                        .iter()
+                        .position(|(byte_idx, _)| *byte_idx == word_end)
+                        .unwrap_or_else(|| char_indices.len());
+                    
+                    vec.push((clean_word.to_string(), start_char_idx, end_char_idx));
                 }
                 vec
             }
