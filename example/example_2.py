@@ -1,15 +1,19 @@
 from textrush import KeywordProcessor
 
-# Initialize with case sensitivity off
 keyword_processor = KeywordProcessor(case_sensitive=False)
 
+dict = {
+    "New": "City",
+    "New York": "NYC",
+    "New York City": "The Big Apple",
+    "York City Center": "YCC",
+    "City Center": "Downtown",
+    "Center": "Middle",
+}
+
 # Add various overlapping and nested keywords
-keyword_processor.add_keyword("New", "City")
-keyword_processor.add_keyword("New York", "NYC")
-keyword_processor.add_keyword("New York City", "The Big Apple")
-keyword_processor.add_keyword("York City Center", "YCC")
-keyword_processor.add_keyword("City Center", "Downtown")
-keyword_processor.add_keyword("Center", "Middle")
+for k, v in dict.items():
+    keyword_processor.add_keyword(k, v)
 
 # Test text with multiple overlapping matches and repeated patterns
 text = """Welcome to New York City Center! 
@@ -17,13 +21,12 @@ The New York skyline is amazing.
 You can find another City Center downtown, 
 but the New YORK CITY is the most famous one."""
 
-print("Found keywords:")
-print(list(keyword_processor.extract_keywords(text)))
+annotations = keyword_processor.extract_keywords(text, span_info=True)
 
-# Expected matches:
-# [
-#   'New', 'New York', 'New York City', 'York City Center', 'City Center', 'Center',  # from first line
-#   'New', 'New York',  # from second line
-#   'City Center', 'Center',  # from third line
-#   'New', 'New York', 'New York City'  # from fourth line
-# ]
+lower_dict = {k.lower(): v for k, v in dict.items()}
+
+for ann in annotations:
+    ann_clean, ann_start, ann_end = ann
+    surface_form = text[ann_start:ann_end]
+    print((*ann, surface_form))
+    assert lower_dict[surface_form.lower()] == ann_clean

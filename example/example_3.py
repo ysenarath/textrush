@@ -3,29 +3,33 @@ from textrush import KeywordProcessor
 # Initialize processor
 keyword_processor = KeywordProcessor(case_sensitive=False)
 
+dictionary = {
+    "St.": "Saint",
+    "St. John": "Saint John",
+    "St. John's": "Saint John's",
+    "John's": "Johnny's",
+    "New St.": "New Saint",
+    "New St. John's": "New Saint John's",
+    "-test-": "Test",
+    "--test--": "Double Test",
+    "test": "Simple Test",
+}
+
 # Add complex patterns with special characters and spaces
-keyword_processor.add_keyword("St.", "Saint")
-keyword_processor.add_keyword("St. John", "Saint John")
-keyword_processor.add_keyword("St. John's", "Saint John's")
-keyword_processor.add_keyword("John's", "Johnny's")
-keyword_processor.add_keyword("New St.", "New Saint")
-keyword_processor.add_keyword("New St. John's", "New Saint John's")
-keyword_processor.add_keyword("-test-", "Test")
-keyword_processor.add_keyword("--test--", "Double Test")
-keyword_processor.add_keyword("test", "Simple Test")
+for k, v in dictionary.items():
+    keyword_processor.add_keyword(k, v)
 
 # Test text with special characters, punctuation, and complex overlapping
 text = """Visit St. John's Cathedral on New St. John's Road.
 There's a -test- and a --test-- and just a test here.
 The ST. JOHN'S market near St. John street has great food."""
 
-print("Found keywords:")
-print(list(keyword_processor.extract_keywords(text)))
+annotations = keyword_processor.extract_keywords(text, span_info=True)
 
-# Expected matches:
-# [
-#   'St.', 'St. John', "St. John's",  "John's",
-#   'New St.', "New St. John's", "John's",
-#   '-test-', '--test--', 'test',
-#   "ST. JOHN'S", 'ST.', 'St. John', "John's"
-# ]
+lower_dict = {k.lower(): v for k, v in dictionary.items()}
+
+for ann in annotations:
+    ann_clean, ann_start, ann_end = ann
+    surface_form = text[ann_start:ann_end]
+    print((*ann, surface_form))
+    assert lower_dict[surface_form.lower()] == ann_clean
