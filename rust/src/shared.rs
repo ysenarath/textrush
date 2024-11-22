@@ -41,7 +41,6 @@ impl<'a> KeywordProcessor<'a> {
         }
         // Check if word contains only word boundaries
         let tokens: Vec<&str> = word.split_word_bounds().collect();
-        println!("{:?}", tokens);
         return tokens.iter().any(|&token| {
             !token
                 .chars()
