@@ -1,5 +1,5 @@
 from typing import Optional, Iterable, Union, List, Tuple, TypeVar, overload
-from textrush.librush import KeywordProcessor as BaseKeywordProcessor
+from textrush.librush import PyKeywordProcessor
 
 __all__ = [
     "KeywordProcessor",
@@ -19,7 +19,7 @@ class KeywordProcessor:
         case_sensitive : bool, optional
             Whether to perform case-sensitive matching, by default False
         """
-        self._processor = BaseKeywordProcessor(case_sensitive)
+        self._processor = PyKeywordProcessor(case_sensitive)
 
     def __len__(self) -> int:
         return len(self._processor)
