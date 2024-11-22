@@ -31,12 +31,34 @@ impl<'a> KeywordProcessor<'a> {
         self.add_keyword_with_clean_word(word, word);
     }
 
+    fn is_valid_keyword(word: &str) -> bool {
+        if word.is_empty() {
+            return false;
+        }
+        // Check if the word contains any non-whitespace characters
+        if word.chars().all(char::is_whitespace) {
+            return false;
+        }
+        // Check if word contains only word boundaries
+        let tokens: Vec<&str> = word.split_word_bounds().collect();
+        println!("{:?}", tokens);
+        return tokens.iter().any(|&token| {
+            !token
+                .chars()
+                .all(|c| c.is_whitespace() || c == '.' || c == ' ')
+        });
+    }
+
     #[inline]
     pub fn add_keyword_with_clean_word(
         &mut self,
         word: &'a str,
         clean_word: &'a str, // make this call an `_impl...()` method that takes an option
     ) {
+        if !Self::is_valid_keyword(word) {
+            return;
+        }
+
         let mut trie = &mut self.trie;
 
         for token in word.split_word_bounds() {
