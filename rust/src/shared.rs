@@ -73,7 +73,7 @@ impl<'a> KeywordProcessor<'a> {
 
     // TODO: should reference to self be like this??
     pub fn extract_keywords(&'a self, text: &'a str) -> impl Iterator<Item = &'a str> + 'a {
-        KeywordExtractor::new(text, &self.trie).map(|(keyword, _, _)| keyword)
+        KeywordExtractor::new(text, &self.trie).map(|(matched_text, _, _)| matched_text)
     }
 
     pub fn extract_keywords_with_span(
@@ -107,6 +107,7 @@ struct KeywordExtractor<'a> {
     idx: usize,
     tokens: Vec<(usize, &'a str)>,
     trie: &'a Node<'a>,
+    text: &'a str,
 }
 
 impl<'a> KeywordExtractor<'a> {
@@ -117,6 +118,7 @@ impl<'a> KeywordExtractor<'a> {
             //  N element inside a Deque (N being the number of levels of the trie??)
             tokens: text.split_word_bound_indices().collect(),
             trie,
+            text,
         }
     }
 }
@@ -141,17 +143,17 @@ impl<'a> Iterator for KeywordExtractor<'a> {
 
             if let Some(child) = node.children.get(token) {
                 node = child;
-                if let Some(clean_word) = node.clean_word {
-                    longest_sequence = Some((
-                        clean_word,
-                        self.tokens[traversal_start_idx].0,
-                        token_start_idx + token.len(),
-                    ));
+                if node.clean_word.is_some() {
+                    // Store the actual matched text from input
+                    let start_idx = self.tokens[traversal_start_idx].0;
+                    let end_idx = token_start_idx + token.len();
+                    longest_sequence = Some((&self.text[start_idx..end_idx], start_idx, end_idx));
+                    // Continue searching for longer matches
                 }
             } else {
-                if let kw @ Some(_) = longest_sequence {
-                    self.idx -= 1;
-                    return kw;
+                if let Some(kw) = longest_sequence {
+                    self.idx = traversal_start_idx + 1; // Move forward by one token to find overlapping matches
+                    return Some(kw);
                 } else {
                     self.idx = traversal_start_idx + 1;
                     // reset the state as above
@@ -161,9 +163,13 @@ impl<'a> Iterator for KeywordExtractor<'a> {
             }
         }
 
-        // we will reach this code only in the last item of the iterator,
-        // in which case we will return the last keyword found, or just None.
-        longest_sequence
+        // Return any remaining match at the end
+        if let Some(kw) = longest_sequence {
+            self.idx = traversal_start_idx + 1;
+            Some(kw)
+        } else {
+            None
+        }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

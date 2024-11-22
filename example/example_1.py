@@ -1,6 +1,7 @@
 from textrush import KeywordProcessor
 
 keyword_processor = KeywordProcessor(case_sensitive=False)
+keyword_processor.add_keyword("Big Ben", "Clock Tower")
 keyword_processor.add_keyword("Big Ben Apple", "New York")
 keyword_processor.add_keyword("Apple", "Just Apple")
 
