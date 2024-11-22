@@ -8,4 +8,5 @@ keyword_processor.add_keyword("Apple", "Just Apple")
 text = "I love Big Ben Apple and the big apple."
 
 print(keyword_processor.extract_keywords(text, span_info=True))
-# ['Big Apple', 'big apple']
+# we need all 3 matches
+# ['Big Ben', 'Big Ben Apple', 'Apple', 'apple']

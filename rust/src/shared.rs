@@ -26,11 +26,6 @@ impl<'a> KeywordProcessor<'a> {
         self.len == 0
     }
 
-    // we want to keep the implementation of the trie private, because it will probably change in the future
-    // fn trie(&self) -> &Node {
-    //     &self.trie
-    // }
-
     #[inline]
     pub fn add_keyword(&mut self, word: &'a str) {
         self.add_keyword_with_clean_word(word, word);
@@ -71,7 +66,6 @@ impl<'a> KeywordProcessor<'a> {
         }
     }
 
-    // TODO: should reference to self be like this??
     pub fn extract_keywords(&'a self, text: &'a str) -> impl Iterator<Item = &'a str> + 'a {
         KeywordExtractor::new(text, &self.trie).map(|(matched_text, _, _)| matched_text)
     }
@@ -85,9 +79,6 @@ impl<'a> KeywordProcessor<'a> {
 
     pub fn replace_keywords(&self, text: &str) -> String {
         let mut string = String::with_capacity(text.len());
-        // the `prev_end` is necessary to adjust the span as we replace the `word` with its
-        // `clean_word`. because if their length is not the same, the next `(start, end)` span
-        // won't be accurate.
         let mut prev_end = 0;
         for (keyword, start, end) in self.extract_keywords_with_span(text) {
             string += &text[prev_end..start];
@@ -95,10 +86,7 @@ impl<'a> KeywordProcessor<'a> {
             prev_end = end;
         }
         string += &text[prev_end..];
-
-        // if a `word` is bigger than its `clean_word` then it will over-allocate
         string.shrink_to_fit();
-
         string
     }
 }
@@ -108,65 +96,55 @@ struct KeywordExtractor<'a> {
     tokens: Vec<(usize, &'a str)>,
     trie: &'a Node<'a>,
     text: &'a str,
+    matches: Vec<(&'a str, usize, usize)>, // Store all matches found
 }
 
 impl<'a> KeywordExtractor<'a> {
     fn new(text: &'a str, trie: &'a Node) -> Self {
         Self {
             idx: 0,
-            // TODO: instead of saving all of them in memory inside a Vector, we should save
-            //  N element inside a Deque (N being the number of levels of the trie??)
             tokens: text.split_word_bound_indices().collect(),
             trie,
             text,
+            matches: Vec::new(),
+        }
+    }
+
+    fn find_matches_at_position(&mut self, start_idx: usize) {
+        let mut node = self.trie;
+        let mut current_idx = start_idx;
+
+        while current_idx < self.tokens.len() {
+            let (token_start_idx, token) = self.tokens[current_idx];
+
+            if let Some(child) = node.children.get(token) {
+                node = child;
+                if node.clean_word.is_some() {
+                    // Found a match, store it
+                    let start_pos = self.tokens[start_idx].0;
+                    let end_pos = token_start_idx + token.len();
+                    self.matches
+                        .push((&self.text[start_pos..end_pos], start_pos, end_pos));
+                }
+                current_idx += 1;
+            } else {
+                break;
+            }
         }
     }
 }
 
 impl<'a> Iterator for KeywordExtractor<'a> {
-    // TODO: return a struct or smth instead of a tuple
     type Item = (&'a str, usize, usize);
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let mut node = self.trie;
-        // a keyword is essentially a collection/sequence of tokens
-        let mut longest_sequence = None;
-        // we need to remember the index that we started traversing the trie, to be able to
-        // roll back our `idx` if we are following a "false" sequence, and also to know the
-        // span of the sequence if we do find a match.
-        let mut traversal_start_idx = self.idx;
-
         while self.idx < self.tokens.len() {
-            let (token_start_idx, token) = self.tokens[self.idx];
+            self.find_matches_at_position(self.idx);
             self.idx += 1;
-
-            if let Some(child) = node.children.get(token) {
-                node = child;
-                if node.clean_word.is_some() {
-                    // Store the actual matched text from input
-                    let start_idx = self.tokens[traversal_start_idx].0;
-                    let end_idx = token_start_idx + token.len();
-                    longest_sequence = Some((&self.text[start_idx..end_idx], start_idx, end_idx));
-                    // Continue searching for longer matches
-                }
-            } else {
-                if let Some(kw) = longest_sequence {
-                    self.idx = traversal_start_idx + 1; // Move forward by one token to find overlapping matches
-                    return Some(kw);
-                } else {
-                    self.idx = traversal_start_idx + 1;
-                    // reset the state as above
-                    node = self.trie;
-                    traversal_start_idx = self.idx;
-                }
-            }
         }
 
-        // Return any remaining match at the end
-        if let Some(kw) = longest_sequence {
-            self.idx = traversal_start_idx + 1;
-            Some(kw)
+        if !self.matches.is_empty() {
+            Some(self.matches.remove(0))
         } else {
             None
         }
