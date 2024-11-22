@@ -119,12 +119,11 @@ impl<'a> KeywordExtractor<'a> {
 
             if let Some(child) = node.children.get(token) {
                 node = child;
-                if node.clean_word.is_some() {
-                    // Found a match, store it
+                if let Some(clean_word) = node.clean_word {
+                    // Found a match, store it with the clean_word
                     let start_pos = self.tokens[start_idx].0;
                     let end_pos = token_start_idx + token.len();
-                    self.matches
-                        .push((&self.text[start_pos..end_pos], start_pos, end_pos));
+                    self.matches.push((clean_word, start_pos, end_pos));
                 }
                 current_idx += 1;
             } else {
