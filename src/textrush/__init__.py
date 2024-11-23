@@ -1,8 +1,5 @@
-from textrush.librush import PyKeywordProcessor
+from textrush.core import KeywordProcessor
 
 __all__ = [
     "KeywordProcessor",
 ]
-
-
-class KeywordProcessor(PyKeywordProcessor): ...
