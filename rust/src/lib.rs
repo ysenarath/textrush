@@ -1,9 +1,11 @@
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 #[path = "."]
 pub mod case_sensitive {
     type HashMap<'a, Node> = std::collections::HashMap<&'a str, Node, fxhash::FxBuildHasher>;
     mod shared;
+    pub use shared::is_valid_keyword;
     pub use shared::KeywordProcessor;
 }
 
@@ -84,22 +86,64 @@ impl PyKeywordProcessor {
     }
 
     #[pyo3(signature = (word, clean_name=None))]
-    fn add_keyword(&mut self, word: String, clean_name: Option<String>) {
+    fn add_keyword(&mut self, word: String, clean_name: Option<String>) -> PyResult<()> {
+        if !case_sensitive::is_valid_keyword(&word) {
+            return Err(PyValueError::new_err(format!(
+                "invalid keyword: {:?}",
+                word
+            )));
+        }
         self.words.push(word.clone());
         self.clean_names.push(clean_name.unwrap_or(word));
+        Ok(())
     }
 
-    fn add_keywords_from_iter<'py>(&mut self, words: Bound<'py, PyAny>) {
+    fn add_keywords_from_iter<'py>(&mut self, words: Bound<'py, PyAny>) -> PyResult<usize> {
+        let mut successfull = 0;
+        let mut failed_words: Vec<String> = Vec::new();
         for word in words.iter().unwrap() {
-            let word = word.unwrap().extract::<String>().unwrap();
-            self.add_keyword(word, None);
+            let word: String = word.unwrap().extract::<String>().unwrap();
+            let res: Result<(), PyErr> = self.add_keyword(word.clone(), None);
+            if res.is_ok() {
+                successfull += 1;
+            } else {
+                failed_words.push(word);
+            }
+        }
+        if !failed_words.is_empty() {
+            Err(PyValueError::new_err(format!(
+                "invalid keywords: {:?}",
+                failed_words
+            )))
+        } else {
+            Ok(successfull)
         }
     }
 
-    fn add_keywords_with_clean_name_from_iter<'py>(&mut self, words: Bound<'py, PyAny>) {
+    fn add_keywords_with_clean_name_from_iter<'py>(
+        &mut self,
+        words: Bound<'py, PyAny>,
+    ) -> PyResult<()> {
+        let mut successfull = 0;
+        let mut failed_words: Vec<String> = Vec::new();
         for word_pair in words.iter().unwrap() {
             let (word, clean_name) = word_pair.unwrap().extract::<(String, String)>().unwrap();
-            self.add_keyword(word, Some(clean_name));
+            // self.add_keyword(word, Some(clean_name));
+            let cloned_word = word.clone();
+            let res: Result<(), PyErr> = self.add_keyword(word, Some(clean_name));
+            if res.is_ok() {
+                successfull += 1;
+            } else {
+                failed_words.push(cloned_word);
+            }
+        }
+        if !failed_words.is_empty() {
+            Err(PyValueError::new_err(format!(
+                "invalid keywords: {:?}",
+                failed_words
+            )))
+        } else {
+            Ok(())
         }
     }
 

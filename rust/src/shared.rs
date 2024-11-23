@@ -1,5 +1,22 @@
 use unicode_segmentation::UnicodeSegmentation;
 
+pub fn is_valid_keyword(word: &str) -> bool {
+    if word.is_empty() {
+        return false;
+    }
+    // Check if the word contains any non-whitespace characters
+    if word.chars().all(char::is_whitespace) {
+        return false;
+    }
+    // Check if word contains only word boundaries
+    let tokens: Vec<&str> = word.split_word_bounds().collect();
+    return tokens.iter().any(|&token| {
+        !token
+            .chars()
+            .all(|c| c.is_whitespace() || c == '.' || c == ' ')
+    });
+}
+
 #[derive(Default, PartialEq, Debug)]
 struct Node<'a> {
     clean_name: Option<&'a str>, // TODO: make this an enum that can hold a reference
@@ -23,30 +40,12 @@ impl<'a> KeywordProcessor<'a> {
     }
 
     pub fn is_empty(&self) -> bool {
-        // or `self.trie.children.is_empty()`
-        self.len == 0
+        self.len == 0 // or `self.trie.children.is_empty()`
     }
 
     #[inline]
     pub fn add_keyword(&mut self, word: &'a str) {
         self.add_keyword_with_clean_name(word, word);
-    }
-
-    fn is_valid_keyword(word: &str) -> bool {
-        if word.is_empty() {
-            return false;
-        }
-        // Check if the word contains any non-whitespace characters
-        if word.chars().all(char::is_whitespace) {
-            return false;
-        }
-        // Check if word contains only word boundaries
-        let tokens: Vec<&str> = word.split_word_bounds().collect();
-        return tokens.iter().any(|&token| {
-            !token
-                .chars()
-                .all(|c| c.is_whitespace() || c == '.' || c == ' ')
-        });
     }
 
     #[inline]
@@ -55,7 +54,7 @@ impl<'a> KeywordProcessor<'a> {
         word: &'a str,
         clean_name: &'a str, // make this call an `_impl...()` method that takes an option
     ) {
-        if !Self::is_valid_keyword(word) {
+        if !is_valid_keyword(word) {
             panic!("invalid keyword: {:?}", word);
         }
 
