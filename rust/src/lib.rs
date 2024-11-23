@@ -3,12 +3,14 @@ mod base;
 #[cfg(not(test))]
 use pyo3::prelude::*;
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 enum KeywordProcessor<'a> {
     CaseSensitive(base::case_sensitive::KeywordProcessor<'a>),
     CaseInsensitive(base::case_insensitive::KeywordProcessor<'a>),
 }
 
+#[allow(unused_macros)]
 macro_rules! duplicate_body {
     ($inner:expr, $var:ident, $body:expr) => {
         match $inner {
@@ -24,7 +26,7 @@ macro_rules! duplicate_body {
 struct PyKeywordProcessor {
     // Store owned strings
     words: Vec<String>,
-    clean_words: Vec<String>,
+    clean_names: Vec<String>,
     case_sensitive: bool,
 }
 
@@ -32,10 +34,11 @@ struct PyKeywordProcessor {
 #[pymethods]
 impl PyKeywordProcessor {
     #[new]
+    #[pyo3(signature = (case_sensitive=false))]
     fn new(case_sensitive: bool) -> Self {
         Self {
             words: Vec::new(),
-            clean_words: Vec::new(),
+            clean_names: Vec::new(),
             case_sensitive,
         }
     }
@@ -53,10 +56,10 @@ impl PyKeywordProcessor {
         self.case_sensitive
     }
 
-    #[pyo3(signature = (word, clean_word=None))]
-    fn add_keyword(&mut self, word: String, clean_word: Option<String>) {
+    #[pyo3(signature = (word, clean_name=None))]
+    fn add_keyword(&mut self, word: String, clean_name: Option<String>) {
         self.words.push(word.clone());
-        self.clean_words.push(clean_word.unwrap_or(word));
+        self.clean_names.push(clean_name.unwrap_or(word));
     }
 
     fn add_keywords_from_iter<'py>(&mut self, words: Bound<'py, PyAny>) {
@@ -66,10 +69,10 @@ impl PyKeywordProcessor {
         }
     }
 
-    fn add_keywords_with_clean_word_from_iter<'py>(&mut self, words: Bound<'py, PyAny>) {
+    fn add_keywords_with_clean_name_from_iter<'py>(&mut self, words: Bound<'py, PyAny>) {
         for word_pair in words.iter().unwrap() {
-            let (word, clean_word) = word_pair.unwrap().extract::<(String, String)>().unwrap();
-            self.add_keyword(word, Some(clean_word));
+            let (word, clean_name) = word_pair.unwrap().extract::<(String, String)>().unwrap();
+            self.add_keyword(word, Some(clean_name));
         }
     }
 
@@ -81,9 +84,9 @@ impl PyKeywordProcessor {
         };
 
         // Add keywords to the processor
-        for (word, clean_word) in self.words.iter().zip(self.clean_words.iter()) {
+        for (word, clean_name) in self.words.iter().zip(self.clean_names.iter()) {
             duplicate_body!(&mut processor, inner, {
-                inner.add_keyword_with_clean_word(word, clean_word);
+                inner.add_keyword_with_clean_name(word, clean_name);
             });
         }
 
@@ -112,9 +115,9 @@ impl PyKeywordProcessor {
         };
 
         // Add keywords to the processor
-        for (word, clean_word) in self.words.iter().zip(self.clean_words.iter()) {
+        for (word, clean_name) in self.words.iter().zip(self.clean_names.iter()) {
             duplicate_body!(&mut processor, inner, {
-                inner.add_keyword_with_clean_word(word, clean_word);
+                inner.add_keyword_with_clean_name(word, clean_name);
             });
         }
 
@@ -128,21 +131,21 @@ impl PyKeywordProcessor {
             } else {
                 let mut vec = vec![];
                 let char_indices: Vec<_> = text.char_indices().collect();
-                
-                for (clean_word, word_start, word_end) in inner.extract_keywords_with_span(text) {
+
+                for (clean_name, word_start, word_end) in inner.extract_keywords_with_span(text) {
                     // Convert byte offset to char offset for start position
                     let start_char_idx = char_indices
                         .iter()
                         .position(|(byte_idx, _)| *byte_idx == word_start)
                         .unwrap_or(0);
-                    
+
                     // Convert byte offset to char offset for end position
                     let end_char_idx = char_indices
                         .iter()
                         .position(|(byte_idx, _)| *byte_idx == word_end)
                         .unwrap_or_else(|| char_indices.len());
-                    
-                    vec.push((clean_word.to_string(), start_char_idx, end_char_idx));
+
+                    vec.push((clean_name.to_string(), start_char_idx, end_char_idx));
                 }
                 vec
             }
@@ -171,9 +174,9 @@ impl PyKeywordProcessor {
         };
 
         // Add keywords to the processor
-        for (word, clean_word) in self.words.iter().zip(self.clean_words.iter()) {
+        for (word, clean_name) in self.words.iter().zip(self.clean_names.iter()) {
             duplicate_body!(&mut processor, inner, {
-                inner.add_keyword_with_clean_word(word, clean_word);
+                inner.add_keyword_with_clean_name(word, clean_name);
             });
         }
 

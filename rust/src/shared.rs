@@ -2,7 +2,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Default, PartialEq, Debug)]
 struct Node<'a> {
-    clean_word: Option<&'a str>, // TODO: make this an enum that can hold a reference
+    clean_name: Option<&'a str>, // TODO: make this an enum that can hold a reference
     children: super::HashMap<'a, Node<'a>>,
 }
 
@@ -12,6 +12,7 @@ pub struct KeywordProcessor<'a> {
     len: usize, // the number of keywords the struct contains (not the number of nodes)
 }
 
+#[allow(dead_code)]
 impl<'a> KeywordProcessor<'a> {
     pub fn new() -> Self {
         Self::default()
@@ -28,7 +29,7 @@ impl<'a> KeywordProcessor<'a> {
 
     #[inline]
     pub fn add_keyword(&mut self, word: &'a str) {
-        self.add_keyword_with_clean_word(word, word);
+        self.add_keyword_with_clean_name(word, word);
     }
 
     fn is_valid_keyword(word: &str) -> bool {
@@ -49,13 +50,13 @@ impl<'a> KeywordProcessor<'a> {
     }
 
     #[inline]
-    pub fn add_keyword_with_clean_word(
+    pub fn add_keyword_with_clean_name(
         &mut self,
         word: &'a str,
-        clean_word: &'a str, // make this call an `_impl...()` method that takes an option
+        clean_name: &'a str, // make this call an `_impl...()` method that takes an option
     ) {
         if !Self::is_valid_keyword(word) {
-            return;
+            panic!("invalid keyword: {:?}", word);
         }
 
         let mut trie = &mut self.trie;
@@ -65,11 +66,11 @@ impl<'a> KeywordProcessor<'a> {
         }
 
         // increment `len` only if the keyword isn't already there
-        if trie.clean_word.is_none() {
+        if trie.clean_name.is_none() {
             self.len += 1;
         }
-        // but even if there is already a keyword, the user can still overwrite its `clean_word`
-        trie.clean_word = Some(clean_word.as_ref());
+        // but even if there is already a keyword, the user can still overwrite its `clean_name`
+        trie.clean_name = Some(clean_name.as_ref());
     }
 
     pub fn add_keywords_from_iter(&mut self, iter: impl IntoIterator<Item = &'a str>) {
@@ -78,12 +79,12 @@ impl<'a> KeywordProcessor<'a> {
         }
     }
 
-    pub fn add_keywords_with_clean_word_from_iter<I>(&mut self, iter: I)
+    pub fn add_keywords_with_clean_name_from_iter<I>(&mut self, iter: I)
     where
         I: IntoIterator<Item = (&'a str, &'a str)>,
     {
-        for (word, clean_word) in iter {
-            self.add_keyword_with_clean_word(word.as_ref(), clean_word.as_ref());
+        for (word, clean_name) in iter {
+            self.add_keyword_with_clean_name(word.as_ref(), clean_name.as_ref());
         }
     }
 
@@ -116,7 +117,6 @@ struct KeywordExtractor<'a> {
     idx: usize,
     tokens: Vec<(usize, &'a str)>,
     trie: &'a Node<'a>,
-    text: &'a str,
     matches: Vec<(&'a str, usize, usize)>, // Store all matches found
 }
 
@@ -126,7 +126,6 @@ impl<'a> KeywordExtractor<'a> {
             idx: 0,
             tokens: text.split_word_bound_indices().collect(),
             trie,
-            text,
             matches: Vec::new(),
         }
     }
@@ -140,11 +139,11 @@ impl<'a> KeywordExtractor<'a> {
 
             if let Some(child) = node.children.get(token) {
                 node = child;
-                if let Some(clean_word) = node.clean_word {
-                    // Found a match, store it with the clean_word
+                if let Some(clean_name) = node.clean_name {
+                    // Found a match, store it with the clean_name
                     let start_pos = self.tokens[start_idx].0;
                     let end_pos = token_start_idx + token.len();
-                    self.matches.push((clean_word, start_pos, end_pos));
+                    self.matches.push((clean_name, start_pos, end_pos));
                 }
                 current_idx += 1;
             } else {
