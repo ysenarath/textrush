@@ -1,16 +1,13 @@
 mod base;
 
-#[cfg(not(test))]
 use pyo3::prelude::*;
 
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 enum KeywordProcessor<'a> {
     CaseSensitive(base::case_sensitive::KeywordProcessor<'a>),
     CaseInsensitive(base::case_insensitive::KeywordProcessor<'a>),
 }
 
-#[allow(unused_macros)]
 macro_rules! duplicate_body {
     ($inner:expr, $var:ident, $body:expr) => {
         match $inner {
@@ -20,7 +17,6 @@ macro_rules! duplicate_body {
     };
 }
 
-#[cfg(not(test))]
 #[pyclass(name = "PyKeywordProcessor")]
 #[derive(PartialEq, Debug)]
 struct PyKeywordProcessor {
@@ -30,7 +26,6 @@ struct PyKeywordProcessor {
     case_sensitive: bool,
 }
 
-#[cfg(not(test))]
 #[pymethods]
 impl PyKeywordProcessor {
     #[new]
@@ -48,7 +43,7 @@ impl PyKeywordProcessor {
     }
 
     fn __repr__(&self) -> String {
-        "< KeywordProcessor() >".to_string()
+        "<KeywordProcessor()>".to_string()
     }
 
     #[getter]
@@ -82,14 +77,12 @@ impl PyKeywordProcessor {
         } else {
             KeywordProcessor::CaseInsensitive(base::case_insensitive::KeywordProcessor::new())
         };
-
         // Add keywords to the processor
         for (word, clean_name) in self.words.iter().zip(self.clean_names.iter()) {
             duplicate_body!(&mut processor, inner, {
                 inner.add_keyword_with_clean_name(word, clean_name);
             });
         }
-
         // Extract keywords
         duplicate_body!(&processor, inner, {
             inner.extract_keywords(text).map(String::from).collect()
@@ -113,14 +106,12 @@ impl PyKeywordProcessor {
         } else {
             KeywordProcessor::CaseInsensitive(base::case_insensitive::KeywordProcessor::new())
         };
-
         // Add keywords to the processor
         for (word, clean_name) in self.words.iter().zip(self.clean_names.iter()) {
             duplicate_body!(&mut processor, inner, {
                 inner.add_keyword_with_clean_name(word, clean_name);
             });
         }
-
         // Extract keywords with span
         duplicate_body!(&processor, inner, {
             if text.is_ascii() {
@@ -131,7 +122,7 @@ impl PyKeywordProcessor {
             } else {
                 let mut vec = vec![];
                 let char_indices: Vec<_> = text.char_indices().collect();
-
+                // Extract keywords with span
                 for (clean_name, word_start, word_end) in inner.extract_keywords_with_span(text) {
                     // Convert byte offset to char offset for start position
                     let start_char_idx = char_indices
@@ -172,20 +163,17 @@ impl PyKeywordProcessor {
         } else {
             KeywordProcessor::CaseInsensitive(base::case_insensitive::KeywordProcessor::new())
         };
-
         // Add keywords to the processor
         for (word, clean_name) in self.words.iter().zip(self.clean_names.iter()) {
             duplicate_body!(&mut processor, inner, {
                 inner.add_keyword_with_clean_name(word, clean_name);
             });
         }
-
         // Replace keywords
         duplicate_body!(&processor, inner, { inner.replace_keywords(text) })
     }
 }
 
-#[cfg(not(test))]
 #[pymodule]
 fn librush(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyKeywordProcessor>()?;
