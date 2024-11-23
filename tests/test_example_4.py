@@ -5,7 +5,7 @@ from textrush import KeywordProcessor
 class TestEdgeCases(unittest.TestCase):
     def setUp(self):
         self.keyword_processor = KeywordProcessor(case_sensitive=True)
-        self.dictionary = {
+        self.vocab = {
             "": "empty",
             " ": "space",
             "  ": "double space",
@@ -20,8 +20,7 @@ class TestEdgeCases(unittest.TestCase):
             "....": "ellipsis",
             "..": "dots",
         }
-        for k, v in self.dictionary.items():
-            self.keyword_processor.add_keyword(k, v)
+        self.keyword_processor.add_keywords_from_dict(self.vocab)
 
     def test_unicode_characters(self):
         text = "Visit the café or CAFÉ"
