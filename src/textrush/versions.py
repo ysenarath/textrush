@@ -1,15 +1,27 @@
 from __future__ import annotations
-from typing import Dict
+from typing import Dict, Type
+from textrush import librush
+from textrush.core import KeywordProcessor
 from textrush.librush import PyKeywordProcessor
 
-__all__ = [
-    "KeywordProcessor",
-]
+versions: Dict[str, Type[KeywordProcessor]] = {}
 
 
-class KeywordProcessor:
+def register(version: str):
+    def register_version(cls: Type[KeywordProcessor]):
+        versions[version] = cls
+        return cls
+
+    return register_version
+
+
+@register("0.0.2")
+class KeywordProcessor_v0_0_2:
+    _kp: PyKeywordProcessor
+
     def __init__(self, case_sensitive: bool = False):
-        self._kp = PyKeywordProcessor(case_sensitive)
+        cls = getattr(librush.v0_0_2, "PyKeywordProcessor")
+        self._kp = cls(case_sensitive)
 
     def add_keyword(self, keyword: str, clean_name: str = None):
         self._kp.add_keyword(keyword, clean_name)
