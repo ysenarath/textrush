@@ -49,7 +49,7 @@ class TestNestedPhrases(unittest.TestCase):
         for clean_text, start, end in results:
             captured = text[start:end] == "New YORK CITY"
 
-        self.assertTrue(captured, "Failed to match 'New YORK CITY'")
+        self.assertTrue(captured, f"Failed to match 'New YORK CITY', got {results}")
 
 
 if __name__ == "__main__":
