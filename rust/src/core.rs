@@ -1,5 +1,5 @@
 use std::collections::hash_map::Entry;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use unicase::UniCase;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -103,14 +103,14 @@ impl Node {
 
 #[derive(Debug)]
 pub struct KeywordProcessor {
-    trie: Arc<Mutex<Node>>,
+    trie: Arc<RwLock<Node>>,
     len: usize,
 }
 
 impl KeywordProcessor {
     pub fn new(case_sensitive: bool) -> Self {
         Self {
-            trie: Arc::new(Mutex::new(Node::new(case_sensitive))),
+            trie: Arc::new(RwLock::new(Node::new(case_sensitive))),
             len: 0,
         }
     }
@@ -133,7 +133,8 @@ impl KeywordProcessor {
             panic!("invalid keyword: {:?}", word);
         }
 
-        let mut trie = &mut *self.trie.lock().unwrap();
+        // follwing code can cause a deadlock?
+        let mut trie = &mut *self.trie.write().unwrap();
 
         for token in word.split_word_bounds() {
             trie = trie.children.entry(token.to_string()).or_default();
@@ -145,6 +146,8 @@ impl KeywordProcessor {
         }
         // but even if there is already a keyword, the user can still overwrite its `clean_name`
         trie.clean_name = Some(clean_name.to_string());
+
+        // locked is unlocked here
     }
 
     pub fn add_keywords_from_iter(&mut self, iter: impl IntoIterator<Item = String>) {
@@ -164,7 +167,7 @@ impl KeywordProcessor {
 
     pub fn extract_keywords(&self, text: String) -> impl Iterator<Item = String> {
         let trie = self.trie.clone();
-        KeywordExtractor::new(text, trie).map(|(matched_text, _, _)| matched_text)
+        KeywordExtractor::new(&text, trie).map(|(matched_text, _, _)| matched_text)
     }
 
     pub fn extract_keywords_with_span(
@@ -172,7 +175,7 @@ impl KeywordProcessor {
         text: String,
     ) -> impl Iterator<Item = (String, usize, usize)> {
         let trie = self.trie.clone();
-        KeywordExtractor::new(text, trie)
+        KeywordExtractor::new(&text, trie)
     }
 
     pub fn replace_keywords(&self, text: String) -> String {
@@ -193,12 +196,12 @@ impl KeywordProcessor {
 struct KeywordExtractor {
     idx: usize,
     tokens: Vec<(usize, String)>,
-    trie: Arc<Mutex<Node>>,
+    trie: Arc<RwLock<Node>>,
     matches: Vec<(String, usize, usize)>, // Store all matches found
 }
 
 impl KeywordExtractor {
-    fn new(text: String, trie: Arc<Mutex<Node>>) -> Self {
+    fn new(text: &String, trie: Arc<RwLock<Node>>) -> Self {
         Self {
             idx: 0,
             tokens: text
@@ -212,7 +215,7 @@ impl KeywordExtractor {
     }
 
     fn find_matches_at_position(&mut self, start_idx: usize) {
-        let mut node = &*self.trie.lock().unwrap();
+        let mut node = &*self.trie.read().unwrap();
         let mut current_idx = start_idx;
 
         while current_idx < self.tokens.len() {
