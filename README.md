@@ -261,6 +261,10 @@ replace_keywords(text: str) -> str
 - `text`: The input text to process
 - Returns: Text with all keywords replaced by their clean names -->
 
+## Performance
+
+TextRush is intended for high-performance text processing tasks, with a focus on speed. The benchamrk results are provided in [this page](https://github.com/ysenarath/textrush/blob/main/tests/benchmark_results/benchmark_results.md).
+
 ## Credits
 
 TextRush is inspired by and builds upon the work of:
