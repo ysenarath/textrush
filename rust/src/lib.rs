@@ -1,12 +1,14 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-mod core;
+#[path = "./versions/lib_v0_0_2.rs"]
 mod lib_v0_0_2;
+mod shared;
+use std::str::FromStr;
 
 #[pyclass(name = "PyKeywordProcessor")]
 #[derive(Debug)]
 struct PyKeywordProcessor {
-    processor: core::KeywordProcessor,
+    processor: shared::KeywordProcessor,
 }
 
 #[pymethods]
@@ -15,7 +17,7 @@ impl PyKeywordProcessor {
     #[pyo3(signature = (case_sensitive=false))]
     fn new(case_sensitive: bool) -> Self {
         Self {
-            processor: core::KeywordProcessor::new(case_sensitive),
+            processor: shared::KeywordProcessor::new(case_sensitive),
         }
     }
 
@@ -29,7 +31,7 @@ impl PyKeywordProcessor {
 
     #[pyo3(signature = (word, clean_name=None))]
     fn add_keyword(&mut self, word: String, clean_name: Option<String>) -> PyResult<()> {
-        if !core::is_valid_keyword(&word) {
+        if !shared::is_valid_keyword(&word) {
             return Err(PyValueError::new_err(format!(
                 "invalid keyword: {:?}",
                 word
@@ -41,39 +43,6 @@ impl PyKeywordProcessor {
             self.processor.add_keyword(&word);
         }
         Ok(())
-    }
-
-    fn extract_keywords(&self, text: String) -> Vec<String> {
-        self.processor
-            .extract_keywords(text)
-            .map(String::from)
-            .collect()
-    }
-
-    fn extract_keywords_with_span(&self, text: String) -> Vec<(String, usize, usize)> {
-        let inner = &self.processor;
-        // Extract keywords with span
-        if text.is_ascii() {
-            inner.extract_keywords_with_span(text).collect()
-        } else {
-            let mut vec = vec![];
-            let char_indices: Vec<_> = text.char_indices().collect();
-            // Extract keywords with span
-            for (clean_name, word_start, word_end) in inner.extract_keywords_with_span(text) {
-                // Convert byte offset to char offset for start position
-                let start_char_idx = char_indices
-                    .iter()
-                    .position(|(byte_idx, _)| *byte_idx == word_start)
-                    .unwrap_or(0);
-                // Convert byte offset to char offset for end position
-                let end_char_idx = char_indices
-                    .iter()
-                    .position(|(byte_idx, _)| *byte_idx == word_end)
-                    .unwrap_or_else(|| char_indices.len());
-                vec.push((clean_name.to_string(), start_char_idx, end_char_idx));
-            }
-            vec
-        }
     }
 
     fn add_keywords_with_clean_name_from_iter<'py>(
@@ -98,6 +67,53 @@ impl PyKeywordProcessor {
         } else {
             Ok(())
         }
+    }
+
+    #[pyo3(signature = (text, strategy="all"))]
+    fn extract_keywords(&self, text: String, strategy: &str) -> Vec<String> {
+        let strategy = shared::ExtractorStrategy::from_str(strategy).unwrap();
+        self.processor
+            .extract_keywords(text, strategy)
+            .map(String::from)
+            .collect()
+    }
+
+    #[pyo3(signature = (text, strategy="all"))]
+    fn extract_keywords_with_span(
+        &self,
+        text: String,
+        strategy: &str,
+    ) -> Vec<(String, usize, usize)> {
+        let strategy = shared::ExtractorStrategy::from_str(strategy).unwrap();
+        let inner = &self.processor;
+        // Extract keywords with span
+        if text.is_ascii() {
+            inner.extract_keywords_with_span(text, strategy).collect()
+        } else {
+            let mut vec = vec![];
+            let char_indices: Vec<_> = text.char_indices().collect();
+            // Extract keywords with span
+            for (clean_name, word_start, word_end) in
+                inner.extract_keywords_with_span(text, strategy)
+            {
+                // Convert byte offset to char offset for start position
+                let start_char_idx = char_indices
+                    .iter()
+                    .position(|(byte_idx, _)| *byte_idx == word_start)
+                    .unwrap_or(0);
+                // Convert byte offset to char offset for end position
+                let end_char_idx = char_indices
+                    .iter()
+                    .position(|(byte_idx, _)| *byte_idx == word_end)
+                    .unwrap_or_else(|| char_indices.len());
+                vec.push((clean_name.to_string(), start_char_idx, end_char_idx));
+            }
+            vec
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.processor.is_empty()
     }
 }
 
