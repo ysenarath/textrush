@@ -1,10 +1,10 @@
 # TextRush Benchmark Results
 
-Generated on: 2024-11-26 22:25:28
+Generated on: 2024-11-26 22:32:22
 
 ## 1. Keyword Addition Performance
 
-| Keywords Count | v0.0.2 | vlatest | vflashtext2 | v0.0.3pre1 | vflashtext |
+| Keywords Count | v0.0.2 | vlatest | vflashtext2 | v0.0.3 | vflashtext |
 |-|-|-|-|-|-|
 | 100 | 84.88µs | 128.03µs | 89.17µs | 148.77µs | 12.07ms |
 | 1,000 | 427.01µs | 914.34µs | 672.10µs | 1.36ms | 7.55ms |
@@ -14,7 +14,7 @@ Generated on: 2024-11-26 22:25:28
 
 ## 2. ASCII Extraction Performance
 
-| Text Length | Keywords | v0.0.2 | vlatest | vflashtext2 | v0.0.3pre1 | vflashtext |
+| Text Length | Keywords | v0.0.2 | vlatest | vflashtext2 | v0.0.3 | vflashtext |
 |-|-|-|-|-|-|-|
 | 1,000 | 1,000 | 485.90µs | 61.04µs | 49.83µs | 65.09µs | 106.10µs |
 | 1,000 | 10,000 | 4.75ms | 46.97µs | 37.19µs | 38.86µs | 115.39µs |
@@ -31,7 +31,7 @@ Generated on: 2024-11-26 22:25:28
 
 ## 3. Unicode Text Performance
 
-| Text Length | v0.0.2 | vlatest | vflashtext2 | v0.0.3pre1 | vflashtext |
+| Text Length | v0.0.2 | vlatest | vflashtext2 | v0.0.3 | vflashtext |
 |-|-|-|-|-|-|
 | 1,000 | 5.45ms | 40.77µs | 41.01µs | 41.96µs | 236.99µs |
 | 10,000 | 5.26ms | 342.13µs | 442.98µs | 338.79µs | 1.92ms |
@@ -39,14 +39,14 @@ Generated on: 2024-11-26 22:25:28
 
 ## 4. Case Sensitivity Impact
 
-| Mode | v0.0.2 | vlatest | vflashtext2 | v0.0.3pre1 | vflashtext |
+| Mode | v0.0.2 | vlatest | vflashtext2 | v0.0.3 | vflashtext |
 |-|-|-|-|-|-|
 | sensitive | 3.56ms | 1.60ms | 1.84ms | 1.55ms | 5.79ms |
 | insensitive | 6.09ms | 2.58ms | 2.94ms | 2.79ms | 5.78ms |
 
 ## 5. Span Information Overhead
 
-| Mode | v0.0.2 | vlatest | vflashtext2 | v0.0.3pre1 | vflashtext |
+| Mode | v0.0.2 | vlatest | vflashtext2 | v0.0.3 | vflashtext |
 |-|-|-|-|-|-|
 | without span | 6.16ms | 2.60ms | 3.03ms | 2.68ms | 5.74ms |
 | with span | 6.10ms | 2.66ms | 3.42ms | 2.57ms | 5.68ms |
