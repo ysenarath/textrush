@@ -32,6 +32,14 @@ class TestSpecialCharacters(unittest.TestCase):
 
         self.assertTrue(captured, "Failed to match 'St. John's'")
 
+        captured = False
+        for clean_text, start, end in results:
+            if text[start:end].lower() == "st.":
+                captured = True
+                self.assertEqual(clean_text, "Saint")
+
+        self.assertTrue(captured, "Failed to match 'Saint'")
+
     def test_nested_abbreviations(self):
         text = "on New St. John's Road"
         results = self.keyword_processor.extract_keywords(text, span_info=True)

@@ -1,10 +1,16 @@
 from __future__ import annotations
-from typing import Dict
+import enum
+from typing import Dict, Literal
 from textrush.librush import PyKeywordProcessor
 
 __all__ = [
     "KeywordProcessor",
 ]
+
+
+class ExtractorStrategy(enum.Enum):
+    ALL = 0
+    LONGEST = 1
 
 
 class KeywordProcessor:
@@ -15,7 +21,9 @@ class KeywordProcessor:
         self._kp.add_keyword(keyword, clean_name)
 
     def add_keywords_from_dict(
-        self, dictionary: Dict[str, str], errors: str = "ignore"
+        self,
+        dictionary: Dict[str, str],
+        errors: str = "ignore",
     ):
         items = list(dictionary.items())
         try:
@@ -25,7 +33,16 @@ class KeywordProcessor:
                 return
             raise e
 
-    def extract_keywords(self, text: str, span_info: bool = False):
+    def extract_keywords(
+        self,
+        text: str,
+        span_info: bool = False,
+        strategy: ExtractorStrategy | Literal["all", "longest"] | None = None,
+    ):
+        if strategy is None:
+            strategy = ExtractorStrategy.ALL
+        if isinstance(strategy, ExtractorStrategy):
+            strategy = strategy.name.lower()
         if span_info:
-            return self._kp.extract_keywords_with_span(text)
-        return self._kp.extract_keywords(text)
+            return self._kp.extract_keywords_with_span(text, strategy=strategy)
+        return self._kp.extract_keywords(text, strategy=strategy)
