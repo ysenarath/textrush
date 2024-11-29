@@ -259,7 +259,11 @@ add_keyword(keyword: str, clean_name: str = None)
 
 ##### add_keywords_from_dict
 ```python
-add_keywords_from_dict(dictionary: Dict[str, str], errors: str = "raise")
+add_keywords_from_dict(
+    self,
+    mapping: Mapping[str, Iterable[str] | str],
+    errors: str = "raise",
+)
 ```
 - `dictionary`: Dictionary mapping keywords to their clean names
 - `errors`: How to handle invalid keywords ("ignore" or "raise")
