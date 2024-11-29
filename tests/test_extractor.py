@@ -22,16 +22,18 @@ class TestKeywordExtractor(unittest.TestCase):
 
         """
         for test_id, test_case in enumerate(self.test_cases):
-            keyword_processor = KeywordProcessor()
+            keyword_processor = KeywordProcessor(case_sensitive=False)
             keyword_processor.add_keywords_from_dict(test_case["keyword_dict"])
             keywords_extracted = keyword_processor.extract_keywords(
-                test_case["sentence"]
+                test_case["sentence"], strategy="longest"
             )
             self.assertEqual(
                 keywords_extracted,
                 test_case["keywords"],
-                "keywords_extracted don't match the expected results for test case: {}".format(
-                    test_id
+                "keywords_extracted don't match the expected results for test case: {} {} {}".format(
+                    test_case,
+                    keyword_processor.get_all_keywords(),
+                    test_case["keyword_dict"],
                 ),
             )
 
@@ -45,7 +47,7 @@ class TestKeywordExtractor(unittest.TestCase):
             keyword_processor = KeywordProcessor(case_sensitive=True)
             keyword_processor.add_keywords_from_dict(test_case["keyword_dict"])
             keywords_extracted = keyword_processor.extract_keywords(
-                test_case["sentence"]
+                test_case["sentence"], strategy="longest"
             )
             self.assertEqual(
                 keywords_extracted,

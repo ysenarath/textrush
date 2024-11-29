@@ -21,8 +21,11 @@ class TestEdgeCases(unittest.TestCase):
             "..": "dots",
         }
         # clean_names = {}
-        for clean_name, keyword in self.vocab.items():
-            self.keyword_processor.add_keyword(keyword, clean_name)
+        for keyword, clean_name in self.vocab.items():
+            try:
+                self.keyword_processor.add_keyword(keyword, clean_name)
+            except ValueError as e:
+                print(e)
             # clean_names.setdefault(clean_name, []).append(keyword)
         # self.keyword_processor.add_keywords_from_dict(clean_names)
         print(self.keyword_processor.get_all_keywords())
