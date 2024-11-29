@@ -1,4 +1,4 @@
-from flashtext import KeywordProcessor
+from textrush import KeywordProcessor
 import logging
 import unittest
 import json
@@ -24,9 +24,9 @@ class TestKPExtractorSpan(unittest.TestCase):
         for test_id, test_case in enumerate(self.test_cases):
             keyword_processor = KeywordProcessor()
             for key in test_case["keyword_dict"]:
-                keyword_processor.add_keywords_from_list(test_case["keyword_dict"][key])
+                keyword_processor.add_keywords_from_iter(test_case["keyword_dict"][key])
             keywords_extracted = keyword_processor.extract_keywords(
-                test_case["sentence"], span_info=True
+                test_case["sentence"], span_info=True, strategy="longest"
             )
             for kwd in keywords_extracted:
                 # returned keyword lowered should match the sapn from sentence
@@ -47,7 +47,8 @@ class TestKPExtractorSpan(unittest.TestCase):
         for test_id, test_case in enumerate(self.test_cases):
             keyword_processor = KeywordProcessor(case_sensitive=True)
             for key in test_case["keyword_dict"]:
-                keyword_processor.add_keywords_from_list(test_case["keyword_dict"][key])
+                print(key)
+                keyword_processor.add_keywords_from_iter(test_case["keyword_dict"][key])
             keywords_extracted = keyword_processor.extract_keywords(
                 test_case["sentence"], span_info=True
             )
