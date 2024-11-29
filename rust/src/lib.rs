@@ -45,28 +45,8 @@ impl PyKeywordProcessor {
         Ok(())
     }
 
-    fn add_keywords_with_clean_name_from_iter<'py>(
-        &mut self,
-        words: Bound<'py, PyAny>,
-    ) -> PyResult<()> {
-        let mut failed_words: Vec<String> = Vec::new();
-        for word_pair in words.iter().unwrap() {
-            let (word, clean_name) = word_pair.unwrap().extract::<(String, String)>().unwrap();
-            // self.add_keyword(word, Some(clean_name));
-            let cloned_word = word.clone();
-            let res: Result<(), PyErr> = self.add_keyword(word, Some(clean_name));
-            if res.is_err() {
-                failed_words.push(cloned_word);
-            }
-        }
-        if !failed_words.is_empty() {
-            Err(PyValueError::new_err(format!(
-                "invalid keywords: {:?}",
-                failed_words
-            )))
-        } else {
-            Ok(())
-        }
+    fn remove_keyword(&mut self, word: &str) {
+        self.processor.remove_keyword(word);
     }
 
     #[pyo3(signature = (text, strategy="all"))]
@@ -110,6 +90,14 @@ impl PyKeywordProcessor {
             }
             vec
         }
+    }
+
+    fn get_all_keywords_with_clean_names(&self) -> Vec<(String, &str)> {
+        self.processor.get_all_keywords_with_clean_names().collect()
+    }
+
+    fn replace_keywords(&self, text: String) -> String {
+        self.processor.replace_keywords(text)
     }
 
     fn is_empty(&self) -> bool {

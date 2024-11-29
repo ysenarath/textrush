@@ -1,7 +1,10 @@
+from typing import Dict, List
 from textrush import KeywordProcessor
 
 kp = KeywordProcessor(case_sensitive=True)
-keywords = {
+
+keywords: Dict[str, List[str]] = {}
+for word, clean_name in {
     # Basic Emojis
     "😊": "smile",
     "❤️": "heart",
@@ -27,8 +30,13 @@ keywords = {
     "€": "euro",
     "£": "pound",
     "₿": "bitcoin",
-}
+}.items():
+    keywords.setdefault(clean_name, []).append(word)
+
 kp.add_keywords_from_dict(keywords)
+
+print(kp.get_all_keywords())
+# ['©', '≠', '€', 'I❤️NY', '£', '∑', '🌟', 'π', '₿', ...]
 
 # Process text with mixed symbols
 text = """Product™ (©2023)
@@ -39,6 +47,5 @@ Price: 99€ or 1₿
 Satisfaction: 😊"""
 
 matches = kp.extract_keywords(text)
-print(
-    matches
-)  # ['trademark', 'copyright', 'celsius', 'technologist', 'euro', 'bitcoin', 'smile']
+print(matches)
+# ['trademark', 'copyright', 'celsius', 'technologist', ...]

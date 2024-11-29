@@ -3,17 +3,16 @@ from textrush import KeywordProcessor
 kp = KeywordProcessor(case_sensitive=False)
 
 keywords = {
-    # Nested city names
-    "New": "City",
-    "New York": "NYC",
-    "New York City": "The Big Apple",
-    "York City Center": "YCC",
-    "City Center": "Downtown",
+    "City": ["New"],
+    "NYC": ["New York"],
+    "The Big Apple": ["New York City"],
+    "YCC": ["York City Center"],
+    "Downtown": ["City Center"],
     # Overlapping abbreviations
-    "St.": "Saint",
-    "St. John": "Saint John",
-    "St. John's": "Saint John's",
-    "New St. John's": "New Saint John's",
+    "Saint": ["St."],
+    "Saint John": ["St. John"],
+    "Saint John's": ["St. John's"],
+    "New Saint John's": ["New St. John's"],
 }
 kp.add_keywords_from_dict(keywords)
 

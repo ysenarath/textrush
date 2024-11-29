@@ -1,20 +1,22 @@
 from textrush import KeywordProcessor
 
 kp = KeywordProcessor(case_sensitive=False)
+
 keywords = {
     # Abbreviations
-    "Dr.": "Doctor",
-    "Mr.": "Mister",
-    "St.": "Saint",
+    "Doctor": ["Dr."],
+    "Mister": ["Mr."],
+    "Saint": ["St.", "St. Mary's"],
     # Special characters
-    "-test-": "Test",
-    "--test--": "Double Test",
-    "test": "Simple Test",
+    "Test": ["-test-", "--test--"],
+    "Simple Test": ["test"],
+    "Double Test": ["--test--"],
     # Mixed cases with punctuation
-    "St. Mary's": "Saint Mary's",
-    "O'Connor": "OConnor",
-    "Smith-Jones": "SmithJones",
+    "Saint Mary's": ["St. Mary's"],
+    "OConnor": ["O'Connor"],
+    "SmithJones": ["Smith-Jones"],
 }
+
 kp.add_keywords_from_dict(keywords)
 
 text = """Dr. Smith-Jones visited St. Mary's.

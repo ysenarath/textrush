@@ -20,7 +20,15 @@ class TestEdgeCases(unittest.TestCase):
             "....": "ellipsis",
             "..": "dots",
         }
-        self.keyword_processor.add_keywords_from_dict(self.vocab)
+        # clean_names = {}
+        for keyword, clean_name in self.vocab.items():
+            try:
+                self.keyword_processor.add_keyword(keyword, clean_name)
+            except ValueError as e:
+                print(e)
+            # clean_names.setdefault(clean_name, []).append(keyword)
+        # self.keyword_processor.add_keywords_from_dict(clean_names)
+        print(self.keyword_processor.get_all_keywords())
 
     def test_unicode_characters(self):
         text = "Visit the café or CAFÉ"
@@ -41,6 +49,7 @@ class TestEdgeCases(unittest.TestCase):
         results = self.keyword_processor.extract_keywords(text, span_info=True)
         # Check currency and percentage symbols
         matched_values = [result[0] for result in results]
+        print(matched_values)
         self.assertIn("hundred dollars", matched_values)
         self.assertIn("hundred percent", matched_values)
 
