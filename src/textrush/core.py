@@ -21,7 +21,7 @@ class KeywordProcessor:
     def remove_keyword(self, keyword: str):
         self._kp.remove_keyword(keyword)
 
-    def remove_keywords_from_list(self, keywords: List[str]):
+    def remove_keywords_from_iter(self, keywords: Iterable[str]):
         for word in keywords:
             self._kp.remove_keyword(word)
 

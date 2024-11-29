@@ -48,7 +48,7 @@ class TestKeywordRemover(unittest.TestCase):
             keyword_processor = KeywordProcessor()
             keyword_processor.add_keywords_from_dict(test_case["keyword_dict"])
             for key in test_case["remove_keyword_dict"]:
-                keyword_processor.remove_keywords_from_list(
+                keyword_processor.remove_keywords_from_iter(
                     test_case["remove_keyword_dict"][key]
                 )
             keywords_extracted = keyword_processor.extract_keywords(
