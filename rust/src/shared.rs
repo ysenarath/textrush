@@ -1,24 +1,25 @@
-use std::collections::hash_map::Entry;
+use std::collections::hash_map::{Entry, Keys};
+use std::iter::Map;
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
 use unicase::UniCase;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub fn is_valid_keyword(word: &str) -> bool {
+    // check if the word is empty
+    // - non empty words can still be invalid
+    // - e.g. " " or "." is not a valid keyword
     if word.is_empty() {
         return false;
     }
-    // Check if the word contains any non-whitespace characters
-    if word.chars().all(char::is_whitespace) {
+    // Check if number of words is greater than 1
+    let tokens: Vec<&str> = word.split_word_bounds().collect();
+    if tokens.len() == 0 {
         return false;
     }
-    // Check if word contains only word boundaries
-    let tokens: Vec<&str> = word.split_word_bounds().collect();
-    return tokens.iter().any(|&token| {
-        !token
-            .chars()
-            .all(|c| c.is_whitespace() || c == '.' || c == ' ')
-    });
+    let token = tokens[0];
+    !token
+        .chars()
+        .all(|c| c.is_whitespace() || c == '.' || c == ' ')
 }
 
 #[derive(Default, Debug, PartialEq)]
@@ -31,30 +32,34 @@ impl<V> UniCaseHashMap<V> {
         self.inner.entry(UniCase::unicode(k))
     }
 
-    pub fn get(&self, k: &String) -> Option<&V> {
+    pub fn get(&self, k: &str) -> Option<&V> {
         self.inner.get(&UniCase::unicode(k.to_string()))
+    }
+
+    pub fn keys(&self) -> Keys<UniCase<String>, V> {
+        self.inner.keys()
     }
 }
 
 #[derive(Debug, PartialEq)]
-enum Dict<V> {
+enum HashMap<V> {
     CaseSensitive(std::collections::HashMap<String, V, fxhash::FxBuildHasher>),
     CaseInsensitive(UniCaseHashMap<V>),
 }
 
-enum NodeDictEntry<'a> {
-    CaseSensitive(Entry<'a, String, Node>),
-    CaseInsensitive(Entry<'a, UniCase<String>, Node>),
+enum HashMapEntry<'a, V> {
+    CaseSensitive(Entry<'a, String, V>),
+    CaseInsensitive(Entry<'a, UniCase<String>, V>),
 }
 
-impl<'a> NodeDictEntry<'a> {
+impl<'a> HashMapEntry<'a, Node> {
     pub fn or_default(self) -> &'a mut Node {
         match self {
-            NodeDictEntry::CaseSensitive(entry) => match entry {
+            HashMapEntry::CaseSensitive(entry) => match entry {
                 Entry::Occupied(entry) => entry.into_mut(),
                 Entry::Vacant(entry) => entry.insert(Node::new(true)),
             },
-            NodeDictEntry::CaseInsensitive(entry) => match entry {
+            HashMapEntry::CaseInsensitive(entry) => match entry {
                 Entry::Occupied(entry) => entry.into_mut(),
                 Entry::Vacant(entry) => entry.insert(Node::new(false)),
             },
@@ -62,26 +67,53 @@ impl<'a> NodeDictEntry<'a> {
     }
 }
 
-impl Dict<Node> {
-    pub fn entry(&mut self, k: String) -> NodeDictEntry {
+enum HashMapKeys<'a> {
+    CaseSensitive(Map<Keys<'a, String, Node>, fn(&String) -> &str>),
+    CaseInsensitive(Map<Keys<'a, UniCase<String>, Node>, fn(&UniCase<String>) -> &str>),
+}
+
+impl<'a> Iterator for HashMapKeys<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Dict::CaseSensitive(inner) => NodeDictEntry::CaseSensitive(inner.entry(k)),
-            Dict::CaseInsensitive(inner) => NodeDictEntry::CaseInsensitive(inner.entry(k)),
+            HashMapKeys::CaseSensitive(inner) => inner.next(),
+            HashMapKeys::CaseInsensitive(inner) => inner.next(),
+        }
+    }
+}
+
+impl HashMap<Node> {
+    pub fn entry(&mut self, k: String) -> HashMapEntry<Node> {
+        match self {
+            HashMap::CaseSensitive(inner) => HashMapEntry::CaseSensitive(inner.entry(k)),
+            HashMap::CaseInsensitive(inner) => HashMapEntry::CaseInsensitive(inner.entry(k)),
         }
     }
 
-    pub fn get(&self, k: &String) -> Option<&Node> {
+    pub fn get(&self, k: &str) -> Option<&Node> {
         match self {
-            Dict::CaseSensitive(inner) => inner.get(k),
-            Dict::CaseInsensitive(inner) => inner.get(k),
+            HashMap::CaseSensitive(inner) => inner.get(k),
+            HashMap::CaseInsensitive(inner) => inner.get(k),
+        }
+    }
+
+    pub fn keys(&self) -> HashMapKeys {
+        match self {
+            HashMap::CaseSensitive(inner) => {
+                HashMapKeys::CaseSensitive(inner.keys().map(|k| k.as_str()))
+            }
+            HashMap::CaseInsensitive(inner) => {
+                HashMapKeys::CaseInsensitive(inner.keys().map(|k| k.as_str()))
+            }
         }
     }
 }
 
 #[derive(PartialEq, Debug)]
-struct Node {
+pub struct Node {
     clean_name: Option<String>,
-    children: Dict<Node>,
+    children: HashMap<Node>,
 }
 
 impl Node {
@@ -89,12 +121,12 @@ impl Node {
         if case_sensitive {
             Self {
                 clean_name: None,
-                children: Dict::CaseSensitive(Default::default()),
+                children: HashMap::CaseSensitive(Default::default()),
             }
         } else {
             Self {
                 clean_name: None,
-                children: Dict::CaseInsensitive(UniCaseHashMap {
+                children: HashMap::CaseInsensitive(UniCaseHashMap {
                     inner: Default::default(),
                 }),
             }
@@ -104,14 +136,14 @@ impl Node {
 
 #[derive(Debug)]
 pub struct KeywordProcessor {
-    trie: Arc<RwLock<Node>>,
+    trie: Node,
     len: usize,
 }
 
 impl KeywordProcessor {
     pub fn new(case_sensitive: bool) -> Self {
         Self {
-            trie: Arc::new(RwLock::new(Node::new(case_sensitive))),
+            trie: Node::new(case_sensitive),
             len: 0,
         }
     }
@@ -129,48 +161,78 @@ impl KeywordProcessor {
         self.add_keyword_with_clean_name(word, &word);
     }
 
+    pub fn remove_keyword(&mut self, word: &str) {
+        if !is_valid_keyword(word) {
+            panic!("invalid keyword: {:?}", word);
+        }
+        // follwing code can cause a deadlock?
+        let mut trie = &mut self.trie;
+        // locked is unlocked here
+        for token in word.split_word_bounds() {
+            // if none return, or get the node - do not create an entry
+            // trie must be mutable
+            trie = match trie.children.entry(token.to_string()) {
+                HashMapEntry::CaseSensitive(entry) => match entry {
+                    Entry::Occupied(entry) => entry.into_mut(),
+                    Entry::Vacant(_) => return,
+                },
+                HashMapEntry::CaseInsensitive(entry) => match entry {
+                    Entry::Occupied(entry) => entry.into_mut(),
+                    Entry::Vacant(_) => return,
+                },
+            };
+        }
+        // remove clean_name
+        if trie.clean_name.is_some() {
+            trie.clean_name = None;
+            self.len -= 1;
+        }
+    }
+
     pub fn add_keyword_with_clean_name(&mut self, word: &str, clean_name: &str) {
         if !is_valid_keyword(word) {
             panic!("invalid keyword: {:?}", word);
         }
-
         // follwing code can cause a deadlock?
-        let mut trie = &mut *self.trie.write().unwrap();
-
+        let mut trie = &mut self.trie;
+        // locked is unlocked here
         for token in word.split_word_bounds() {
+            // let temp = trie.children.get(&token.to_string()).unwrap();
             trie = trie.children.entry(token.to_string()).or_default();
         }
-
         // increment `len` only if the keyword isn't already there
         if trie.clean_name.is_none() {
             self.len += 1;
         }
         // but even if there is already a keyword, the user can still overwrite its `clean_name`
         trie.clean_name = Some(clean_name.to_string());
-
         // locked is unlocked here
+    }
+
+    pub fn get_all_keywords(&self) -> AllKeywordsIterator {
+        // should return an iterator over all keywords, not clean_names
+        AllKeywordsIterator::new(&self.trie)
     }
 
     pub fn extract_keywords(
         &self,
         text: String,
         strategy: ExtractorStrategy,
-    ) -> impl Iterator<Item = String> {
-        let trie = self.trie.clone();
-        KeywordExtractor::new(&text, trie, strategy).map(|(matched_text, _, _)| matched_text)
+    ) -> Map<KeywordExtractor, fn((String, usize, usize)) -> String> {
+        KeywordExtractor::new(&text, &self.trie, strategy).map(|(matched_text, _, _)| matched_text)
     }
 
     pub fn extract_keywords_with_span(
         &self,
         text: String,
         strategy: ExtractorStrategy,
-    ) -> impl Iterator<Item = (String, usize, usize)> {
-        let trie = self.trie.clone();
-        KeywordExtractor::new(&text, trie, strategy)
+    ) -> KeywordExtractor {
+        KeywordExtractor::new(&text, &self.trie, strategy)
     }
 
     pub fn replace_keywords(&self, text: String) -> String {
         let textref = text.to_string();
+        // Create a new empty String with at least the specified capacity
         let mut string = String::with_capacity(text.len());
         let mut prev_end = 0;
         for (keyword, start, end) in
@@ -205,16 +267,16 @@ impl FromStr for ExtractorStrategy {
     }
 }
 
-struct KeywordExtractor {
+pub struct KeywordExtractor<'t> {
     idx: usize,
     tokens: Vec<(usize, String)>,
-    trie: Arc<RwLock<Node>>,
+    trie: &'t Node,
     matches: Vec<(String, usize, usize)>, // Store all matches found
     strategy: ExtractorStrategy,
 }
 
-impl KeywordExtractor {
-    fn new(text: &String, trie: Arc<RwLock<Node>>, strategy: ExtractorStrategy) -> Self {
+impl<'t> KeywordExtractor<'t> {
+    fn new(text: &String, trie: &'t Node, strategy: ExtractorStrategy) -> Self {
         Self {
             idx: 0,
             tokens: text
@@ -229,7 +291,7 @@ impl KeywordExtractor {
     }
 
     fn find_matches_at_position(&mut self, start_idx: usize) {
-        let mut node = &*self.trie.read().unwrap();
+        let mut node = self.trie;
         let mut current_idx = start_idx;
 
         while current_idx < self.tokens.len() {
@@ -252,7 +314,7 @@ impl KeywordExtractor {
     }
 
     fn find_longest_match(&mut self, start_idx: usize) -> usize {
-        let mut node = &*self.trie.read().unwrap();
+        let mut node = self.trie;
         let mut current_idx = start_idx;
         let mut longest_match = None;
         let mut end_idx = start_idx;
@@ -283,7 +345,7 @@ impl KeywordExtractor {
     }
 }
 
-impl Iterator for KeywordExtractor {
+impl<'t> Iterator for KeywordExtractor<'t> {
     type Item = (String, usize, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -319,5 +381,33 @@ impl Iterator for KeywordExtractor {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         (0, Some(self.tokens.len()))
+    }
+}
+
+pub struct AllKeywordsIterator<'t> {
+    stack: Vec<(String, &'t Node)>,
+}
+
+impl<'t> AllKeywordsIterator<'t> {
+    pub fn new(root: &'t Node) -> Self {
+        let stack = vec![("".to_string(), root)];
+        Self { stack }
+    }
+}
+
+impl<'t> Iterator for AllKeywordsIterator<'t> {
+    type Item = (String, &'t str);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((prefix, node)) = self.stack.pop() {
+            for token in node.children.keys() {
+                let value = node.children.get(token).unwrap();
+                self.stack.push((format!("{}{}", prefix, token), value));
+            }
+            if let Some(clean_name) = &node.clean_name {
+                return Some((prefix, clean_name.as_str()));
+            }
+        }
+        None
     }
 }
