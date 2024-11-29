@@ -1,7 +1,9 @@
 from textrush import KeywordProcessor
 
 kp = KeywordProcessor(case_sensitive=True)
-keywords = {
+keywords = {}
+
+for word, clean_name in {
     # Basic Emojis
     "😊": "smile",
     "❤️": "heart",
@@ -27,8 +29,13 @@ keywords = {
     "€": "euro",
     "£": "pound",
     "₿": "bitcoin",
-}
+}.items():
+    keywords.setdefault(clean_name, []).append(word)
+
 kp.add_keywords_from_dict(keywords)
+print(
+    kp.get_all_keywords()
+)  # ['smile', 'heart', 'star', 'technologist', 'family', 'rainbow flag', 'i love new york', 'celebration party', 'copyright', 'registered', 'trademark', 'celsius', 'pi', 'sum', 'square root', 'not equal', 'euro', 'pound', 'bitcoin']
 
 # Process text with mixed symbols
 text = """Product™ (©2023)
