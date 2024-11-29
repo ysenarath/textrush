@@ -92,8 +92,8 @@ impl PyKeywordProcessor {
         }
     }
 
-    fn get_all_keywords(&self) -> Vec<(String, &str)> {
-        self.processor.get_all_keywords().collect()
+    fn get_all_keywords_with_clean_names(&self) -> Vec<(String, &str)> {
+        self.processor.get_all_keywords_with_clean_names().collect()
     }
 
     fn replace_keywords(&self, text: String) -> String {

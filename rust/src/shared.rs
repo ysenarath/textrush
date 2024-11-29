@@ -208,7 +208,7 @@ impl KeywordProcessor {
         }
     }
 
-    pub fn get_all_keywords(&self) -> AllKeywordsIterator {
+    pub fn get_all_keywords_with_clean_names(&self) -> AllKeywordsIterator {
         // should return an iterator over all keywords, not clean_names
         AllKeywordsIterator::new(&self.trie)
     }
