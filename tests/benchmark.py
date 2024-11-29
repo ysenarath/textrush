@@ -4,9 +4,9 @@ from pathlib import Path
 from datetime import datetime
 from textrush import versions
 
-version = "latest"
+version = "0.0.4-dev"
 
-if version == "latest":
+if version == "latest" or version.endswith("-dev"):
     from textrush import KeywordProcessor
 else:
     KeywordProcessor = versions[version]
