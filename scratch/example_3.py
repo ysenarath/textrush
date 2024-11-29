@@ -2,7 +2,6 @@ from textrush import KeywordProcessor
 
 kp = KeywordProcessor(case_sensitive=False)
 
-# Dictionary of keywords (clean_name -> [keywords])
 keywords = {
     # Abbreviations
     "Doctor": ["Dr."],

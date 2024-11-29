@@ -1,8 +1,9 @@
+from typing import Dict, List
 from textrush import KeywordProcessor
 
 kp = KeywordProcessor(case_sensitive=True)
-keywords = {}
 
+keywords: Dict[str, List[str]] = {}
 for word, clean_name in {
     # Basic Emojis
     "😊": "smile",
