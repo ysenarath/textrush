@@ -1,6 +1,5 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::PyIterator;
 #[path = "./versions/lib_v0_0_2.rs"]
 mod lib_v0_0_2;
 mod shared;
@@ -48,29 +47,6 @@ impl PyKeywordProcessor {
 
     fn remove_keyword(&mut self, word: &str) {
         self.processor.remove_keyword(word);
-    }
-
-    fn add_keywords_with_clean_name_from_iter<'py>(
-        &mut self,
-        words: &Bound<'py, PyIterator>,
-    ) -> PyResult<()> {
-        let mut failed_words: Vec<String> = Vec::new();
-        for word_pair in words.iter().unwrap() {
-            let (word, clean_name) = word_pair.unwrap().extract::<(String, String)>().unwrap();
-            let cloned_word = word.clone();
-            let res: Result<(), PyErr> = self.add_keyword(word, Some(clean_name));
-            if res.is_err() {
-                failed_words.push(cloned_word);
-            }
-        }
-        if !failed_words.is_empty() {
-            Err(PyValueError::new_err(format!(
-                "invalid keywords: {:?}",
-                failed_words
-            )))
-        } else {
-            Ok(())
-        }
     }
 
     #[pyo3(signature = (text, strategy="all"))]

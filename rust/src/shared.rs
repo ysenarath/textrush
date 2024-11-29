@@ -16,10 +16,9 @@ pub fn is_valid_keyword(word: &str) -> bool {
     if tokens.len() == 0 {
         return false;
     }
-    let token = tokens[0];
-    !token
-        .chars()
-        .all(|c| c.is_whitespace() || c == '.' || c == ' ')
+    tokens
+        .iter()
+        .any(|t| !t.chars().all(|c| c.is_whitespace() || c == '.' || c == ' '))
 }
 
 #[derive(Default, Debug, PartialEq)]
@@ -156,6 +155,26 @@ impl KeywordProcessor {
         self.len == 0 // or `self.trie.children.is_empty()`
     }
 
+    pub fn add_keyword_with_clean_name(&mut self, word: &str, clean_name: &str) {
+        if !is_valid_keyword(word) {
+            panic!("invalid keyword: {:?}", word);
+        }
+        // follwing code can cause a deadlock?
+        let mut trie = &mut self.trie;
+        // locked is unlocked here
+        for token in word.split_word_bounds() {
+            // let temp = trie.children.get(&token.to_string()).unwrap();
+            trie = trie.children.entry(token.to_string()).or_default();
+        }
+        // increment `len` only if the keyword isn't already there
+        if trie.clean_name.is_none() {
+            self.len += 1;
+        }
+        // but even if there is already a keyword, the user can still overwrite its `clean_name`
+        trie.clean_name = Some(clean_name.to_string());
+        // locked is unlocked here
+    }
+
     #[inline]
     pub fn add_keyword(&mut self, word: &str) {
         self.add_keyword_with_clean_name(word, &word);
@@ -187,26 +206,6 @@ impl KeywordProcessor {
             trie.clean_name = None;
             self.len -= 1;
         }
-    }
-
-    pub fn add_keyword_with_clean_name(&mut self, word: &str, clean_name: &str) {
-        if !is_valid_keyword(word) {
-            panic!("invalid keyword: {:?}", word);
-        }
-        // follwing code can cause a deadlock?
-        let mut trie = &mut self.trie;
-        // locked is unlocked here
-        for token in word.split_word_bounds() {
-            // let temp = trie.children.get(&token.to_string()).unwrap();
-            trie = trie.children.entry(token.to_string()).or_default();
-        }
-        // increment `len` only if the keyword isn't already there
-        if trie.clean_name.is_none() {
-            self.len += 1;
-        }
-        // but even if there is already a keyword, the user can still overwrite its `clean_name`
-        trie.clean_name = Some(clean_name.to_string());
-        // locked is unlocked here
     }
 
     pub fn get_all_keywords(&self) -> AllKeywordsIterator {
