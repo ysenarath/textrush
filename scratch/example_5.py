@@ -2,24 +2,25 @@ from textrush import KeywordProcessor
 
 kp = KeywordProcessor(case_sensitive=True)
 
+# clean_name -> [keywords]
 keywords = {
     # European Languages
-    "café": "coffee shop",  # French
-    "München": "Munich",  # German
+    "coffee shop": ["café"],
+    "Munich": ["München"],
     # Asian Scripts
-    "東京": "Tokyo",  # Japanese
-    "서울": "Seoul",  # Korean
-    "北京": "Beijing",  # Chinese
+    "Tokyo": ["東京"],
+    "Seoul": ["서울"],
+    "Beijing": ["北京"],
     # Right-to-Left Scripts
-    "مرحبا": "hello",  # Arabic
-    "قهوة": "coffee",
+    "hello": ["مرحبا"],  # Arabic
+    "coffee": ["قهوة"],  # Arabic
     # Cyrillic and Greek
-    "Москва": "Moscow",  # Russian
-    "Αθήνα": "Athens",  # Greek
+    "Moscow": ["Москва"],
+    "Athens": ["Αθήνα"],
     # Complex Scripts (Sinhala)
-    "ක්‍රීඩා": "sports",  # With combined letters
-    "කර්තෘ": "author",  # With special characters
-    "ශ්‍රී ලංකා": "Sri Lanka",  # Mixed phrase
+    "sports": ["ක්‍රීඩා"],
+    "author": ["කර්තෘ"],
+    "Sri Lanka": ["ශ්‍රී ලංකා"],
 }
 kp.add_keywords_from_dict(keywords)
 
@@ -29,4 +30,5 @@ Would you like some café in Москва?
 Visit 東京 for the ක්‍රීඩා competition."""
 
 matches = kp.extract_keywords(text)
-print(matches)  # ['Sri Lanka', 'coffee shop', 'Moscow', 'Tokyo', 'sports']
+print(matches)
+# ['Sri Lanka', 'coffee shop', 'Moscow', 'Tokyo', 'sports']

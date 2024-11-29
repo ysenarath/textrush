@@ -33,9 +33,9 @@ for word, clean_name in {
     keywords.setdefault(clean_name, []).append(word)
 
 kp.add_keywords_from_dict(keywords)
-print(
-    kp.get_all_keywords()
-)  # ['smile', 'heart', 'star', 'technologist', 'family', 'rainbow flag', 'i love new york', 'celebration party', 'copyright', 'registered', 'trademark', 'celsius', 'pi', 'sum', 'square root', 'not equal', 'euro', 'pound', 'bitcoin']
+
+print(kp.get_all_keywords())
+# ['©', '≠', '€', 'I❤️NY', '£', '∑', '🌟', 'π', '₿', ...]
 
 # Process text with mixed symbols
 text = """Product™ (©2023)
@@ -46,6 +46,5 @@ Price: 99€ or 1₿
 Satisfaction: 😊"""
 
 matches = kp.extract_keywords(text)
-print(
-    matches
-)  # ['trademark', 'copyright', 'celsius', 'technologist', 'euro', 'bitcoin', 'smile']
+print(matches)
+# ['trademark', 'copyright', 'celsius', 'technologist', ...]

@@ -15,7 +15,6 @@ print(f"Number of keywords: {len(keywords)}, Type: {type(keywords)}")
 print(keywords)
 print()
 
-
 # try replace
 text = "Python is a programming language. Rust is another programming language."
 replaced_text = kp.replace_keywords(text)
@@ -24,7 +23,6 @@ print()
 
 keywords = kp.extract_keywords(text, span_info=True)
 print(keywords)
-
 
 text = "python is commonly used in Machine Learning and Artificial Intelligence."
 replaced_text = kp.replace_keywords(text)
