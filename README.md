@@ -39,20 +39,28 @@ kp.add_keyword("python", "Python Programming Language")
 
 # Add multiple keywords from a dictionary
 keywords = {
-    "rust": "Rust Programming Language",
-    "machine learning": "ML",
-    "artificial intelligence": "AI"
+    "Rust Programming Language": ["rust"],
+    "ML": ["machine learning"],
+    "AI": ["artificial intelligence"],
+    "Machine": ["system", "device", "machine"],
 }
 kp.add_keywords_from_dict(keywords)
 
 # Extract keywords
 text = "I love Python and Rust for Machine Learning and Artificial Intelligence"
 keywords = kp.extract_keywords(text)
-print(keywords)  # ['Python Programming Language', 'Rust Programming Language', 'ML', 'AI']
+print(keywords)
+# ['Python Programming Language', 'Rust Programming Language', 'Machine', 'ML', 'AI']
 
 # Extract with span information
 spans = kp.extract_keywords(text, span_info=True)
-print(spans)  # [('Python Programming Language', 7, 13), ('Rust Programming Language', 18, 22), ...]
+print(spans)
+# [('Python Programming Language', 7, 13), ('Rust Programming Language', 18, 22), ('Machine', 27, 34), ('ML', 27, 43), ('AI', 48, 71)]
+
+# return only the longest keywords
+keywords = kp.extract_keywords(text, span_info=False, strategy="longest")
+print(keywords)
+# ['Python Programming Language', 'Rust Programming Language', 'ML', 'AI']
 ```
 
 ## Advanced Usage
@@ -62,20 +70,21 @@ print(spans)  # [('Python Programming Language', 7, 13), ('Rust Programming Lang
 TextRush handles overlapping keywords:
 
 ```python
+from textrush import KeywordProcessor
+
 kp = KeywordProcessor(case_sensitive=False)
+
 keywords = {
-    # Nested city names
-    "New": "City",
-    "New York": "NYC",
-    "New York City": "The Big Apple",
-    "York City Center": "YCC",
-    "City Center": "Downtown",
-    
+    "City": ["New"],
+    "NYC": ["New York"],
+    "The Big Apple": ["New York City"],
+    "YCC": ["York City Center"],
+    "Downtown": ["City Center"],
     # Overlapping abbreviations
-    "St.": "Saint",
-    "St. John": "Saint John",
-    "St. John's": "Saint John's",
-    "New St. John's": "New Saint John's"
+    "Saint": ["St."],
+    "Saint John": ["St. John"],
+    "Saint John's": ["St. John's"],
+    "New Saint John's": ["New St. John's"],
 }
 kp.add_keywords_from_dict(keywords)
 
@@ -95,23 +104,25 @@ print(matches)  # ['City', "New Saint John's", 'Saint', "Saint John's"]
 TextRush handles special characters, punctuation, and abbreviations with ease:
 
 ```python
+from textrush import KeywordProcessor
+
 kp = KeywordProcessor(case_sensitive=False)
+
 keywords = {
     # Abbreviations
-    "Dr.": "Doctor",
-    "Mr.": "Mister",
-    "St.": "Saint",
-    
+    "Doctor": ["Dr."],
+    "Mister": ["Mr."],
+    "Saint": ["St.", "St. Mary's"],
     # Special characters
-    "-test-": "Test",
-    "--test--": "Double Test",
-    "test": "Simple Test",
-    
+    "Test": ["-test-", "--test--"],
+    "Simple Test": ["test"],
+    "Double Test": ["--test--"],
     # Mixed cases with punctuation
-    "St. Mary's": "Saint Mary's",
-    "O'Connor": "OConnor",
-    "Smith-Jones": "SmithJones"
+    "Saint Mary's": ["St. Mary's"],
+    "OConnor": ["O'Connor"],
+    "SmithJones": ["Smith-Jones"],
 }
+
 kp.add_keywords_from_dict(keywords)
 
 text = """Dr. Smith-Jones visited St. Mary's.
@@ -126,40 +137,45 @@ print(matches)  # ['Doctor', 'SmithJones', 'Saint', "Saint Mary's", ...]
 TextRush provides comprehensive support for Unicode symbols, emojis, and special characters:
 
 ```python
+from typing import Dict, List
+from textrush import KeywordProcessor
+
 kp = KeywordProcessor(case_sensitive=True)
-keywords = {
+
+keywords: Dict[str, List[str]] = {}
+for word, clean_name in {
     # Basic Emojis
     "😊": "smile",
     "❤️": "heart",
     "🌟": "star",
-    
     # Complex Emoji Sequences
     "👨‍💻": "technologist",
     "👨‍👩‍👧‍👦": "family",
     "🏳️‍🌈": "rainbow flag",
-    
     # Emoji-Text Combinations
     "I❤️NY": "i love new york",
     "🎉Party": "celebration party",
-    
     # Special Symbols
     "©": "copyright",
     "®": "registered",
     "™": "trademark",
     "°C": "celsius",
-    
     # Mathematical Symbols
     "π": "pi",
     "∑": "sum",
     "√": "square root",
     "≠": "not equal",
-    
     # Currency Symbols
     "€": "euro",
     "£": "pound",
-    "₿": "bitcoin"
-}
+    "₿": "bitcoin",
+}.items():
+    keywords.setdefault(clean_name, []).append(word)
+
 kp.add_keywords_from_dict(keywords)
+
+print(kp.get_all_keywords())
+# ['©', '≠', '€', 'I❤️NY', '£', '∑', '🌟', 'π', '₿', ...]
 
 # Process text with mixed symbols
 text = """Product™ (©2023)
@@ -170,7 +186,8 @@ Price: 99€ or 1₿
 Satisfaction: 😊"""
 
 matches = kp.extract_keywords(text)
-print(matches)  # ['trademark', 'copyright', 'celsius', 'technologist', 'euro', 'bitcoin', 'smile']
+print(matches)
+# ['trademark', 'copyright', 'celsius', 'technologist', ...]
 ```
 
 ### Multilingual Support
@@ -184,29 +201,29 @@ TextRush provides robust support for multiple languages and scripts, including:
 - Complex Scripts (Sinhala with යුක්තාක්ෂර support)
 
 ```python
+from textrush import KeywordProcessor
+
 kp = KeywordProcessor(case_sensitive=True)
+
+# clean_name -> [keywords]
 keywords = {
     # European Languages
-    "café": "coffee shop",      # French
-    "München": "Munich",        # German
-    
+    "coffee shop": ["café"],
+    "Munich": ["München"],
     # Asian Scripts
-    "東京": "Tokyo",            # Japanese
-    "서울": "Seoul",            # Korean
-    "北京": "Beijing",          # Chinese
-    
+    "Tokyo": ["東京"],
+    "Seoul": ["서울"],
+    "Beijing": ["北京"],
     # Right-to-Left Scripts
-    "مرحبا": "hello",          # Arabic
-    "قهوة": "coffee",
-    
+    "hello": ["مرحبا"],  # Arabic
+    "coffee": ["قهوة"],  # Arabic
     # Cyrillic and Greek
-    "Москва": "Moscow",        # Russian
-    "Αθήνα": "Athens",         # Greek
-    
+    "Moscow": ["Москва"],
+    "Athens": ["Αθήνα"],
     # Complex Scripts (Sinhala)
-    "ක්‍රීඩා": "sports",        # With combined letters
-    "කර්තෘ": "author",         # With special characters
-    "ශ්‍රී ලංකා": "Sri Lanka"    # Mixed phrase
+    "sports": ["ක්‍රීඩා"],
+    "author": ["කර්තෘ"],
+    "Sri Lanka": ["ශ්‍රී ලංකා"],
 }
 kp.add_keywords_from_dict(keywords)
 
@@ -216,7 +233,8 @@ Would you like some café in Москва?
 Visit 東京 for the ක්‍රීඩා competition."""
 
 matches = kp.extract_keywords(text)
-print(matches)  # ['Sri Lanka', 'coffee shop', 'Moscow', 'Tokyo', 'sports']
+print(matches)
+# ['Sri Lanka', 'coffee shop', 'Moscow', 'Tokyo', 'sports']
 ```
 
 ## API Reference
@@ -241,25 +259,26 @@ add_keyword(keyword: str, clean_name: str = None)
 
 ##### add_keywords_from_dict
 ```python
-add_keywords_from_dict(dictionary: Dict[str, str], errors: str = "ignore")
+add_keywords_from_dict(dictionary: Dict[str, str], errors: str = "raise")
 ```
 - `dictionary`: Dictionary mapping keywords to their clean names
 - `errors`: How to handle invalid keywords ("ignore" or "raise")
 
 ##### extract_keywords
 ```python
-extract_keywords(text: str, span_info: bool = False)
+extract_keywords(text: str, span_info: bool = False, strategy: str = "all") -> List[str]
 ```
 - `text`: The input text to process
 - `span_info`: Whether to include position information
+- `strategy`: How to handle overlapping keywords ("all", "longest")
 - Returns: List of matches or list of (match, start, end) tuples if span_info=True
 
-<!-- ##### replace_keywords
+##### replace_keywords
 ```python
 replace_keywords(text: str) -> str
 ```
 - `text`: The input text to process
-- Returns: Text with all keywords replaced by their clean names -->
+- Returns: Text with all keywords replaced by their clean names
 
 ## Performance
 
