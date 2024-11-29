@@ -1,7 +1,8 @@
 from __future__ import annotations
 import enum
-from typing import Dict, Literal, Iterable, List, Tuple
+from typing import Literal, Iterable, List, Mapping, Tuple
 from textrush.librush import PyKeywordProcessor
+import operator as op
 
 __all__ = [
     "KeywordProcessor",
@@ -24,9 +25,12 @@ class KeywordProcessor:
         for word in keywords:
             self._kp.remove_keyword(word)
 
-    def remove_keywords_from_dict(self, dictionary: Dict[str, Iterable[str] | str]):
+    def remove_keywords_from_dict(
+        self,
+        mapping: Mapping[str, Iterable[str] | str],
+    ):
         values: List[str] = []
-        for _, value in dictionary.items():
+        for _, value in mapping.items():
             if isinstance(value, str):
                 values.append(value)
                 continue
@@ -46,7 +50,7 @@ class KeywordProcessor:
 
     def add_keywords_from_dict(
         self,
-        dictionary: Dict[str, Iterable[str] | str],  # clean_name: [keyword1, keyword2]
+        mapping: Mapping[str, Iterable[str] | str],  # clean_name: [keyword1, keyword2]
         errors: str = "raise",
     ):
         if errors not in ("raise", "ignore"):
@@ -54,7 +58,7 @@ class KeywordProcessor:
                 f"invalid value for errors: {errors}. "
                 "Must be one of 'raise', 'ignore'."
             )
-        for clean_name, keywords in dictionary.items():
+        for clean_name, keywords in mapping.items():
             if isinstance(keywords, str):
                 keywords = [keywords]
                 continue
@@ -70,10 +74,9 @@ class KeywordProcessor:
         self,
         text: str,
         span_info: bool = False,
-        strategy: ExtractorStrategy | Literal["all", "longest"] | None = None,
+        strategy: ExtractorStrategy
+        | Literal["all", "longest", "ALL", "LONGEST"] = ExtractorStrategy.ALL,
     ):
-        if strategy is None:
-            strategy = ExtractorStrategy.ALL
         if isinstance(strategy, ExtractorStrategy):
             strategy = strategy.name.lower()
         if span_info:
@@ -83,8 +86,16 @@ class KeywordProcessor:
     def replace_keywords(self, text: str) -> str:
         return self._kp.replace_keywords(text)
 
-    def get_all_keywords(self) -> List[Tuple[str, str]]:
-        return self._kp.get_all_keywords()
+    def get_all_keywords_with_clean_names(self) -> List[Tuple[str, str]]:
+        return self._kp.get_all_keywords_with_clean_names()
+
+    def get_all_keywords(self) -> List[str]:
+        return list(
+            map(
+                op.itemgetter(0),
+                self._kp.get_all_keywords_with_clean_names(),
+            )
+        )
 
     def __len__(self):
         return len(self._kp)
