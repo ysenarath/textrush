@@ -15,7 +15,7 @@ class TestListLoad(unittest.TestCase):
     def test_list_loading(self):
         keyword_processor = KeywordProcessor()
         keyword_list = ["java", "product management"]
-        keyword_processor.addke(keyword_list)
+        keyword_processor.add_keywords_from_iter(keyword_list)
         sentence = "I know java and product management"
         keywords_extracted = keyword_processor.extract_keywords(sentence)
         self.assertEqual(
