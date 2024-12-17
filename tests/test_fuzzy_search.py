@@ -1,6 +1,7 @@
 import unittest
 from textrush import KeywordProcessor
 
+
 class TestFuzzySearch(unittest.TestCase):
     def setUp(self):
         self.processor = KeywordProcessor()
@@ -51,5 +52,6 @@ class TestFuzzySearch(unittest.TestCase):
         self.assertEqual(matches[0][0], "python")
         self.assertGreater(matches[0][1], 0.8)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
