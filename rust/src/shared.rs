@@ -5,13 +5,9 @@ use unicase::UniCase;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub fn is_valid_keyword(word: &str) -> bool {
-    // check if the word is empty
-    // - non empty words can still be invalid
-    // - e.g. " " or "." is not a valid keyword
     if word.is_empty() {
         return false;
     }
-    // Check if number of words is greater than 1
     let tokens: Vec<&str> = word.split_word_bounds().collect();
     if tokens.len() == 0 {
         return false;
@@ -19,6 +15,75 @@ pub fn is_valid_keyword(word: &str) -> bool {
     tokens
         .iter()
         .any(|t| !t.chars().all(|c| c.is_whitespace() || c == '.' || c == ' '))
+}
+
+fn levenshtein_distance(s1: &str, s2: &str, case_sensitive: bool) -> usize {
+    let s1_lower = if !case_sensitive {
+        s1.to_lowercase()
+    } else {
+        s1.to_string()
+    };
+    let s2_lower = if !case_sensitive {
+        s2.to_lowercase()
+    } else {
+        s2.to_string()
+    };
+
+    let len1 = s1_lower.chars().count();
+    let len2 = s2_lower.chars().count();
+
+    if len1 == 0 {
+        return len2;
+    }
+    if len2 == 0 {
+        return len1;
+    }
+
+    let mut matrix = vec![vec![0; len2 + 1]; len1 + 1];
+
+    for i in 0..=len1 {
+        matrix[i][0] = i;
+    }
+    for j in 0..=len2 {
+        matrix[0][j] = j;
+    }
+
+    for (i, c1) in s1_lower.chars().enumerate() {
+        for (j, c2) in s2_lower.chars().enumerate() {
+            let cost = if c1 == c2 { 0 } else { 1 };
+            matrix[i + 1][j + 1] = std::cmp::min(
+                std::cmp::min(
+                    matrix[i][j + 1] + 1, // deletion
+                    matrix[i + 1][j] + 1, // insertion
+                ),
+                matrix[i][j] + cost, // substitution
+            );
+        }
+    }
+
+    matrix[len1][len2]
+}
+
+fn similarity_ratio(s1: &str, s2: &str, case_sensitive: bool) -> f64 {
+    let s1_lower = if !case_sensitive {
+        s1.to_lowercase()
+    } else {
+        s1.to_string()
+    };
+    let s2_lower = if !case_sensitive {
+        s2.to_lowercase()
+    } else {
+        s2.to_string()
+    };
+
+    let distance = levenshtein_distance(s1, s2, case_sensitive);
+    let max_len = std::cmp::max(s1_lower.chars().count(), s2_lower.chars().count());
+
+    if max_len == 0 {
+        1.0
+    } else {
+        1.0 - (distance as f64 / max_len as f64)
+    }
 }
 
 #[derive(Default, Debug, PartialEq)]
@@ -113,6 +178,7 @@ impl HashMap<Node> {
 pub struct Node {
     clean_name: Option<String>,
     children: HashMap<Node>,
+    case_sensitive: bool,
 }
 
 impl Node {
@@ -121,6 +187,7 @@ impl Node {
             Self {
                 clean_name: None,
                 children: HashMap::CaseSensitive(Default::default()),
+                case_sensitive,
             }
         } else {
             Self {
@@ -128,6 +195,7 @@ impl Node {
                 children: HashMap::CaseInsensitive(UniCaseHashMap {
                     inner: Default::default(),
                 }),
+                case_sensitive,
             }
         }
     }
@@ -152,27 +220,21 @@ impl KeywordProcessor {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len == 0 // or `self.trie.children.is_empty()`
+        self.len == 0
     }
 
     pub fn add_keyword_with_clean_name(&mut self, word: &str, clean_name: &str) {
         if !is_valid_keyword(word) {
             panic!("invalid keyword: {:?}", word);
         }
-        // follwing code can cause a deadlock?
         let mut trie = &mut self.trie;
-        // locked is unlocked here
         for token in word.split_word_bounds() {
-            // let temp = trie.children.get(&token.to_string()).unwrap();
             trie = trie.children.entry(token.to_string()).or_default();
         }
-        // increment `len` only if the keyword isn't already there
         if trie.clean_name.is_none() {
             self.len += 1;
         }
-        // but even if there is already a keyword, the user can still overwrite its `clean_name`
         trie.clean_name = Some(clean_name.to_string());
-        // locked is unlocked here
     }
 
     #[inline]
@@ -184,12 +246,8 @@ impl KeywordProcessor {
         if !is_valid_keyword(word) {
             panic!("invalid keyword: {:?}", word);
         }
-        // follwing code can cause a deadlock?
         let mut trie = &mut self.trie;
-        // locked is unlocked here
         for token in word.split_word_bounds() {
-            // if none return, or get the node - do not create an entry
-            // trie must be mutable
             trie = match trie.children.entry(token.to_string()) {
                 HashMapEntry::CaseSensitive(entry) => match entry {
                     Entry::Occupied(entry) => entry.into_mut(),
@@ -201,7 +259,6 @@ impl KeywordProcessor {
                 },
             };
         }
-        // remove clean_name
         if trie.clean_name.is_some() {
             trie.clean_name = None;
             self.len -= 1;
@@ -209,7 +266,6 @@ impl KeywordProcessor {
     }
 
     pub fn get_all_keywords_with_clean_names(&self) -> AllKeywordsIterator {
-        // should return an iterator over all keywords, not clean_names
         AllKeywordsIterator::new(&self.trie)
     }
 
@@ -229,9 +285,20 @@ impl KeywordProcessor {
         KeywordExtractor::new(&text, &self.trie, strategy)
     }
 
+    pub fn fuzzy_search(&self, query: &str, threshold: f64) -> Vec<(String, f64)> {
+        let mut matches = Vec::new();
+        for (keyword, clean_name) in self.get_all_keywords_with_clean_names() {
+            let similarity = similarity_ratio(&keyword, query, self.trie.case_sensitive);
+            if similarity >= threshold {
+                matches.push((clean_name.to_string(), similarity));
+            }
+        }
+        matches.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        matches
+    }
+
     pub fn replace_keywords(&self, text: String) -> String {
         let textref = text.to_string();
-        // Create a new empty String with at least the specified capacity
         let mut string = String::with_capacity(text.len());
         let mut prev_end = 0;
         for (keyword, start, end) in
@@ -270,7 +337,7 @@ pub struct KeywordExtractor<'t> {
     idx: usize,
     tokens: Vec<(usize, String)>,
     trie: &'t Node,
-    matches: Vec<(String, usize, usize)>, // Store all matches found
+    matches: Vec<(String, usize, usize)>,
     strategy: ExtractorStrategy,
 }
 
@@ -299,7 +366,6 @@ impl<'t> KeywordExtractor<'t> {
             if let Some(child) = node.children.get(token) {
                 node = child;
                 if let Some(clean_name) = &node.clean_name {
-                    // Found a match, store it with the clean_name
                     let start_pos = self.tokens[start_idx].0;
                     let end_pos = token_start_idx + token.len();
                     self.matches
@@ -324,7 +390,6 @@ impl<'t> KeywordExtractor<'t> {
             if let Some(child) = node.children.get(token) {
                 node = child;
                 if let Some(clean_name) = &node.clean_name {
-                    // Found a match, store it with the clean_name
                     let start_pos = self.tokens[start_idx].0;
                     let end_pos = token_start_idx + token.len();
                     longest_match = Some((clean_name.to_string(), start_pos, end_pos));
@@ -354,7 +419,7 @@ impl<'t> Iterator for KeywordExtractor<'t> {
                 if self.idx >= self.tokens.len() {
                     break;
                 }
-                self.idx += 1; // skip the current token since there is no match
+                self.idx += 1;
                 end_idx = self.find_longest_match(self.idx);
             }
             self.idx = end_idx + 1;
@@ -364,9 +429,7 @@ impl<'t> Iterator for KeywordExtractor<'t> {
                 None
             }
         } else {
-            // this is not a real iterator
             while self.idx < self.tokens.len() {
-                // this will only performed once per iterator
                 self.find_matches_at_position(self.idx);
                 self.idx += 1;
             }

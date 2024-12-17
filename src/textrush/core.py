@@ -83,6 +83,21 @@ class KeywordProcessor:
             return self._kp.extract_keywords_with_span(text, strategy=strategy)
         return self._kp.extract_keywords(text, strategy=strategy)
 
+    def fuzzy_search(
+        self, query: str, threshold: float = 0.8
+    ) -> List[Tuple[str, float]]:
+        """Search for keywords that are similar to the query string.
+
+        Args:
+            query: The string to search for
+            threshold: Minimum similarity score (0.0 to 1.0) for matches
+
+        Returns:
+            List of tuples containing (keyword, similarity_score)
+            sorted by similarity score in descending order
+        """
+        return self._kp.fuzzy_search(query, threshold)
+
     def replace_keywords(self, text: str) -> str:
         return self._kp.replace_keywords(text)
 

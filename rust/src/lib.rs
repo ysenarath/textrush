@@ -92,6 +92,11 @@ impl PyKeywordProcessor {
         }
     }
 
+    #[pyo3(signature = (query, threshold=0.8))]
+    fn fuzzy_search(&self, query: String, threshold: f64) -> Vec<(String, f64)> {
+        self.processor.fuzzy_search(&query, threshold)
+    }
+
     fn get_all_keywords_with_clean_names(&self) -> Vec<(String, &str)> {
         self.processor.get_all_keywords_with_clean_names().collect()
     }
