@@ -339,6 +339,8 @@ pub struct KeywordExtractor<'t> {
     trie: &'t Node,
     matches: Vec<(String, usize, usize)>,
     strategy: ExtractorStrategy,
+    fuzzy: bool,
+    threshold: f64,
 }
 
 impl<'t> KeywordExtractor<'t> {
@@ -353,6 +355,8 @@ impl<'t> KeywordExtractor<'t> {
             trie: trie,
             matches: Vec::new(),
             strategy: strategy,
+            fuzzy: false,
+            threshold: 0.0,
         }
     }
 
@@ -362,6 +366,30 @@ impl<'t> KeywordExtractor<'t> {
 
         while current_idx < self.tokens.len() {
             let (token_start_idx, token) = &self.tokens[current_idx];
+
+            if self.fuzzy {
+                let mut found = false;
+                for keyword in node.children.keys() {
+                    let similarity = similarity_ratio(&keyword, token, node.case_sensitive);
+                    if similarity >= self.threshold {
+                        if let Some(child) = node.children.get(keyword) {
+                            node = child;
+                            if let Some(clean_name) = &node.clean_name {
+                                let start_pos = self.tokens[start_idx].0;
+                                let end_pos = token_start_idx + token.len();
+                                self.matches
+                                    .push((clean_name.to_string(), start_pos, end_pos));
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if found {
+                    current_idx += 1;
+                    continue;
+                }
+            }
 
             if let Some(child) = node.children.get(token) {
                 node = child;
@@ -386,7 +414,6 @@ impl<'t> KeywordExtractor<'t> {
 
         while current_idx < self.tokens.len() {
             let (token_start_idx, token) = &self.tokens[current_idx];
-
             if let Some(child) = node.children.get(token) {
                 node = child;
                 if let Some(clean_name) = &node.clean_name {
